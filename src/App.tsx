@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Repeat, Bell, CheckCircle2, AlertCircle, Pencil, Trash2, X } from 'lucide-react';
 
@@ -51,6 +51,11 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [autostartEnabled, setAutostartEnabled] = useState(false);
+
+  const remindersRef = useRef<Reminder[]>(reminders);
+  useEffect(() => {
+    remindersRef.current = reminders;
+  }, [reminders]);
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
@@ -219,49 +224,38 @@ export default function App() {
       const currentSecond = now.getSeconds();
       const todayStr = now.toDateString();
 
-      setReminders((prevReminders) => {
-        let hasChanges = false;
+      // 1. Purely filter matching reminders from fresh ref state
+      const matched = remindersRef.current.filter((reminder) => {
+        if (!reminder.active || reminder.lastTriggeredDate === todayStr) return false;
 
-        const nextReminders = prevReminders.map((reminder) => {
-          if (!reminder.active) return reminder;
+        let targetHour = parseInt(reminder.hour, 10);
+        const targetMinute = parseInt(reminder.minute, 10);
 
-          // Log active reminder check
-          console.log(`[Scheduler Tick] Interval ID: ${timer} | time=${Date.now()}ms | id=${reminder.id} | lastTriggeredDate=${reminder.lastTriggeredDate}`);
+        if (reminder.amPm === 'PM' && targetHour < 12) {
+          targetHour += 12;
+        } else if (reminder.amPm === 'AM' && targetHour === 12) {
+          targetHour = 0;
+        }
 
-          // If triggered today already, skip
-          if (reminder.lastTriggeredDate === todayStr) return reminder;
+        return currentHour === targetHour && currentMinute === targetMinute && currentSecond === 0;
+      });
 
-          let targetHour = parseInt(reminder.hour, 10);
-          const targetMinute = parseInt(reminder.minute, 10);
+      if (matched.length === 0) return;
 
-          if (reminder.amPm === 'PM' && targetHour < 12) {
-            targetHour += 12;
-          } else if (reminder.amPm === 'AM' && targetHour === 12) {
-            targetHour = 0;
-          }
+      const matchedIds = new Set(matched.map((m) => m.id));
 
-          if (currentHour === targetHour && currentMinute === targetMinute && currentSecond === 0) {
-            console.log(`[Reminder Matched] Interval ID: ${timer} | time=${Date.now()}ms | id=${reminder.id} | message="${reminder.message}"`);
-            triggerFloatingReminder(reminder.message);
-            console.log(`[Reminder marked as handled] Interval ID: ${timer} | time=${Date.now()}ms | id=${reminder.id} | setting lastTriggeredDate=${todayStr}`);
-            hasChanges = true;
-            return {
-              ...reminder,
-              lastTriggeredDate: todayStr,
-            };
-          }
+      // 2. Pure state update to mark handled
+      setReminders((prev) =>
+        prev.map((r) => (matchedIds.has(r.id) ? { ...r, lastTriggeredDate: todayStr } : r))
+      );
 
-          return reminder;
-        });
-
-        return hasChanges ? nextReminders : prevReminders;
+      // 3. Trigger floating reminder EXACTLY ONCE per match outside state updater
+      matched.forEach((reminder) => {
+        triggerFloatingReminder(reminder.message);
       });
     }, 1000);
 
-    console.log(`Scheduler started\nInterval ID: ${timer}`);
-
     return () => {
-      console.log(`Scheduler stopped\nInterval ID: ${timer}`);
       clearInterval(timer);
     };
   }, [isPaused]);

@@ -17,11 +17,12 @@ export default function ReminderWindow() {
     let active = true;
     let unlistenFn: (() => void) | null = null;
 
-    listen<{ message: string }>('trigger-reminder', (event) => {
-      console.log(`[ReminderWindow received trigger-reminder] time=${Date.now()}ms payload=`, event.payload);
-      const msg = event.payload?.message || 'Time to drink water! 💧';
-      setQueue((prev) => [...prev, msg]);
-    })
+    getCurrentWindow()
+      .listen<{ message: string }>('trigger-reminder', (event) => {
+        console.log(`[ReminderWindow received trigger-reminder] time=${Date.now()}ms payload=`, event.payload);
+        const msg = event.payload?.message || 'Time to drink water! 💧';
+        setQueue((prev) => [...prev, msg]);
+      })
       .then((fn) => {
         if (active) {
           unlistenFn = fn;
@@ -81,26 +82,31 @@ export default function ReminderWindow() {
 
   // 3. Complete exit animation -> transition to Hidden -> signal Rust backend to hide window
   const handleExitComplete = () => {
-    console.log(`[Spider exit animation complete] time=${Date.now()}ms calling hide_reminder`);
     if (exitTimerRef.current) {
       clearTimeout(exitTimerRef.current);
       exitTimerRef.current = null;
     }
-    setCurrentState('Hidden');
-    setCurrentMessage('');
-    try {
-      import('@tauri-apps/api/core')
-        .then(({ invoke }) => {
-          invoke('hide_reminder').catch(() => {
+
+    setCurrentState((prev) => {
+      if (prev !== 'SpiderLeaving') return prev;
+
+      console.log(`[Spider exit animation complete] time=${Date.now()}ms calling hide_reminder`);
+      try {
+        import('@tauri-apps/api/core')
+          .then(({ invoke }) => {
+            invoke('hide_reminder').catch(() => {
+              getCurrentWindow().hide();
+            });
+          })
+          .catch(() => {
             getCurrentWindow().hide();
           });
-        })
-        .catch(() => {
-          getCurrentWindow().hide();
-        });
-    } catch {
-      getCurrentWindow().hide();
-    }
+      } catch {
+        getCurrentWindow().hide();
+      }
+      return 'Hidden';
+    });
+    setCurrentMessage('');
   };
 
   // 2. Dismiss sequence: Fade out card -> Slide Spider-Man up -> Hide window after animation
@@ -136,9 +142,9 @@ export default function ReminderWindow() {
               ease: isLeaving ? 'easeIn' : 'easeOut',
             }}
             onAnimationComplete={() => {
-              if (isLeaving) {
+              if (currentState === 'SpiderLeaving') {
                 handleExitComplete();
-              } else {
+              } else if (currentState === 'SpiderEntering') {
                 handleSpiderArrived();
               }
             }}
