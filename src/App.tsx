@@ -279,47 +279,104 @@ export default function App() {
 
       </div>
 
-      {/* Floating Spider-Man Mascot (Anchored to top-right window corner, web at top-0, height equal to card, overlaps upper-right corner by 10-15%) */}
-      <div className="absolute top-0 right-[6%] sm:right-[12%] md:right-[18%] lg:right-[22%] z-20 pointer-events-none">
-        <img
-          src={spiderManImg}
-          alt="Spider-Man Coming Down"
-          className="h-[480px] md:h-[530px] w-auto object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.85)]"
-        />
-      </div>
+      {/* Floating Spider-Man Mascot (Hidden when animated reminder companion is active) */}
+      {!isModalOpen && (
+        <div className="absolute top-0 right-[6%] sm:right-[12%] md:right-[18%] lg:right-[22%] z-20 pointer-events-none">
+          <img
+            src={spiderManImg}
+            alt="Spider-Man Coming Down"
+            className="h-[480px] md:h-[530px] w-auto object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.85)]"
+          />
+        </div>
+      )}
 
-      {/* Fallback Top-Right Floating Reminder Overlay (White card matching reference image) */}
+      {/* Web / Vercel Animated Reminder Companion Overlay */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed top-[60px] right-[260px] z-50 pointer-events-auto">
+          <WebReminderOverlay
+            message={popupMessage}
+            onClose={() => setIsModalOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+    </motion.div>
+  );
+}
+
+// Full animation overlay component for Web Browser / Vercel environment
+function WebReminderOverlay({ message, onClose }: { message: string; onClose: () => void }) {
+  const [spiderArrived, setSpiderArrived] = useState(false);
+  const [showCard, setShowCard] = useState(false);
+  const [isDismissing, setIsDismissing] = useState(false);
+
+  const handleSpiderArrived = () => {
+    setSpiderArrived(true);
+    setTimeout(() => {
+      setShowCard(true);
+    }, 150);
+  };
+
+  const handleDismiss = () => {
+    setShowCard(false);
+    setTimeout(() => {
+      setIsDismissing(true);
+    }, 150);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 pointer-events-none flex items-start justify-end pr-6 pt-0 select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+      <div className="relative inline-block pointer-events-auto">
+        {/* Animated Spider-Man Mascot */}
+        <motion.img
+          src={spiderManImg}
+          alt="Spider-Man"
+          initial={{ y: -550 }}
+          animate={{ y: isDismissing ? -550 : 0 }}
+          transition={{
+            duration: isDismissing ? 0.6 : 0.7,
+            ease: isDismissing ? 'easeIn' : 'easeOut',
+          }}
+          onAnimationComplete={() => {
+            if (!spiderArrived) {
+              handleSpiderArrived();
+            } else if (isDismissing) {
+              onClose();
+            }
+          }}
+          className="w-[240px] h-auto object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.85)] pointer-events-none block"
+        />
+
+        {/* White Reminder Card positioned to the left of Spider-Man */}
+        <AnimatePresence>
+          {showCard && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.88, x: 20 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.88, x: 20 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, transition: { duration: 0.15 } }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="w-[260px] bg-white text-slate-900 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-100 relative"
+              className="absolute right-full mr-3 top-[140px] w-[250px] bg-white text-slate-900 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-100 z-30"
             >
               <div className="text-[10px] font-extrabold uppercase tracking-widest text-red-500 mb-1.5">
                 REMINDER
               </div>
-              <p className="text-slate-900 font-bold text-sm sm:text-base leading-snug break-words mb-3">
-                {popupMessage}
+              <p className="text-slate-900 font-bold text-sm leading-snug break-words mb-3">
+                {message}
               </p>
               <div className="flex justify-end pt-1">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={handleDismiss}
                   className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-sm transition-colors cursor-pointer"
                 >
                   Dismiss
                 </button>
               </div>
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-    </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
 
