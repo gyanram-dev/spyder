@@ -51,12 +51,40 @@ export default function App() {
   const [reminders, setReminders] = useState<Reminder[]>(getInitialReminders);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [autostartEnabled, setAutostartEnabled] = useState(false);
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
+
+  // Check current autostart status on mount
+  useEffect(() => {
+    import('@tauri-apps/plugin-autostart')
+      .then(({ isEnabled }) => isEnabled())
+      .then((enabled) => {
+        setAutostartEnabled(enabled);
+      })
+      .catch((err) => {
+        console.warn('Autostart plugin status check failed:', err);
+      });
+  }, []);
+
+  const handleToggleAutostart = async (checked: boolean) => {
+    setAutostartEnabled(checked);
+    try {
+      const { enable, disable } = await import('@tauri-apps/plugin-autostart');
+      if (checked) {
+        await enable();
+      } else {
+        await disable();
+      }
+    } catch (err) {
+      console.error('Failed to change autostart preference:', err);
+      setAutostartEnabled(!checked);
+    }
+  };
 
   // Listen for Pause / Resume events from Tauri System Tray
   useEffect(() => {
@@ -77,6 +105,7 @@ export default function App() {
       if (unlisten) unlisten();
     };
   }, []);
+
 
   // Sync reminders to localStorage
   useEffect(() => {
@@ -498,7 +527,23 @@ export default function App() {
           )}
         </div>
 
+        {/* Startup Settings */}
+        <div className="pt-3 border-t border-[#3d0812]">
+          <label className="flex items-center justify-between cursor-pointer p-3 rounded-2xl bg-[#110205] border border-[#540c1b] hover:border-[#801328] transition-all select-none">
+            <span className="text-xs font-bold text-[#e0b5be] tracking-wide">
+              Launch at Windows startup
+            </span>
+            <input
+              type="checkbox"
+              checked={autostartEnabled}
+              onChange={(e) => handleToggleAutostart(e.target.checked)}
+              className="w-4 h-4 accent-[#ff4d5a] rounded cursor-pointer"
+            />
+          </label>
+        </div>
+
       </div>
+
 
       {/* Floating Spider-Man Mascot */}
       {!isModalOpen && (

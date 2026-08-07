@@ -3,11 +3,24 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, WindowEvent,
 };
+use tauri_plugin_autostart::MacosLauncher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::AppleScript,
+            Some(vec!["--autostart"]),
+        ))
         .setup(|app| {
+            // Check if application was launched on Windows startup
+            let is_autostart = std::env::args().any(|arg| arg == "--autostart");
+            if is_autostart {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
+
             // Build system tray menu items
             let open_item = MenuItemBuilder::with_id("open", "Open Spydy Reminder").build(app)?;
             let pause_item = MenuItemBuilder::with_id("pause", "Pause Reminders").build(app)?;
@@ -94,4 +107,5 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
 
