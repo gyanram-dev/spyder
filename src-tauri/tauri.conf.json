@@ -14,12 +14,18 @@
       {
         "label": "main",
         "title": "Spydy Reminder",
-        "width": 800,
-        "height": 520,
-        "resizable": false,
+        "width": 1200,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 650,
+        "resizable": true,
+        "maximizable": true,
+        "minimizable": true,
+        "closable": true,
         "fullscreen": false,
-        "transparent": true,
-        "decorations": false
+        "decorations": true,
+        "transparent": false,
+        "center": true
       },
       {
         "label": "reminder",
