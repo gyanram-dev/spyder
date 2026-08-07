@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Repeat, Bell, CheckCircle2, AlertCircle, Pencil, Trash2, X } from 'lucide-react';
-import spiderManImg from './assets/spider-man-coming-down.png';
 
 export interface Reminder {
   id: string;
@@ -56,8 +55,6 @@ export default function App() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [popupMessage, setPopupMessage] = useState('');
 
   // Check current autostart status on mount
   useEffect(() => {
@@ -194,47 +191,19 @@ export default function App() {
   // Trigger Native Floating Reminder Window
   const triggerFloatingReminder = async (msgText: string) => {
     const formattedMsg = msgText.trim() || 'Finish design system review & update assets';
+    console.log(`[show_reminder() called] time=${Date.now()}ms message="${formattedMsg}"`);
 
     try {
-      const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-      
-      const existing = await WebviewWindow.getByLabel('reminder');
-      if (existing) {
-        await existing.destroy();
-      }
-
-      const screenWidth = window.screen.availWidth || 1920;
-      const xPos = Math.max(0, screenWidth - 540);
-      const yPos = 20;
-
-      const webview = new WebviewWindow('reminder', {
-        url: `index.html?window=reminder&msg=${encodeURIComponent(formattedMsg)}`,
-        title: 'Spydy Floating Reminder',
-        width: 520,
-        height: 440,
-        x: xPos,
-        y: yPos,
-        transparent: true,
-        decorations: false,
-        alwaysOnTop: true,
-        skipTaskbar: true,
-        resizable: false,
-        shadow: false,
-        focus: false,
-      });
-
-      await webview.once('tauri://created', () => {
-        console.log('Floating reminder window created successfully');
-      });
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('show_reminder', { message: formattedMsg });
     } catch (e) {
-      console.warn('Tauri API not active, rendering top-right floating overlay fallback:', e);
-      setPopupMessage(formattedMsg);
-      setIsModalOpen(true);
+      console.warn('Tauri API not active:', e);
     }
   };
 
   // Test button handler
   const handleTestReminder = () => {
+    console.log(`[Test Click] time=${Date.now()}ms`);
     const testMsg = message.trim() || 'Finish design system review & update assets';
     triggerFloatingReminder(testMsg);
   };
@@ -256,6 +225,9 @@ export default function App() {
         const nextReminders = prevReminders.map((reminder) => {
           if (!reminder.active) return reminder;
 
+          // Log active reminder check
+          console.log(`[Scheduler Tick] Interval ID: ${timer} | time=${Date.now()}ms | id=${reminder.id} | lastTriggeredDate=${reminder.lastTriggeredDate}`);
+
           // If triggered today already, skip
           if (reminder.lastTriggeredDate === todayStr) return reminder;
 
@@ -269,7 +241,9 @@ export default function App() {
           }
 
           if (currentHour === targetHour && currentMinute === targetMinute && currentSecond === 0) {
+            console.log(`[Reminder Matched] Interval ID: ${timer} | time=${Date.now()}ms | id=${reminder.id} | message="${reminder.message}"`);
             triggerFloatingReminder(reminder.message);
+            console.log(`[Reminder marked as handled] Interval ID: ${timer} | time=${Date.now()}ms | id=${reminder.id} | setting lastTriggeredDate=${todayStr}`);
             hasChanges = true;
             return {
               ...reminder,
@@ -284,7 +258,12 @@ export default function App() {
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    console.log(`Scheduler started\nInterval ID: ${timer}`);
+
+    return () => {
+      console.log(`Scheduler stopped\nInterval ID: ${timer}`);
+      clearInterval(timer);
+    };
   }, [isPaused]);
 
 
@@ -543,106 +522,7 @@ export default function App() {
         </div>
 
       </div>
-
-
-      {/* Floating Spider-Man Mascot */}
-      {!isModalOpen && (
-        <div className="absolute top-0 right-[6%] sm:right-[12%] md:right-[18%] lg:right-[22%] z-20 pointer-events-none">
-          <img
-            src={spiderManImg}
-            alt="Spider-Man Coming Down"
-            className="h-[480px] md:h-[530px] w-auto object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.85)]"
-          />
-        </div>
-      )}
-
-      {/* Web / Vercel Animated Reminder Companion Overlay */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <WebReminderOverlay
-            message={popupMessage}
-            onClose={() => setIsModalOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
     </motion.div>
-  );
-}
-
-// Full animation overlay component for Web Browser / Vercel environment
-function WebReminderOverlay({ message, onClose }: { message: string; onClose: () => void }) {
-  const [spiderArrived, setSpiderArrived] = useState(false);
-  const [showCard, setShowCard] = useState(false);
-  const [isDismissing, setIsDismissing] = useState(false);
-
-  const handleSpiderArrived = () => {
-    setSpiderArrived(true);
-    setTimeout(() => {
-      setShowCard(true);
-    }, 150);
-  };
-
-  const handleDismiss = () => {
-    setShowCard(false);
-    setTimeout(() => {
-      setIsDismissing(true);
-    }, 150);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 pointer-events-none flex items-start justify-end pr-6 pt-0 select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-      <div className="relative inline-block pointer-events-auto">
-        {/* Animated Spider-Man Mascot */}
-        <motion.img
-          src={spiderManImg}
-          alt="Spider-Man"
-          initial={{ y: -550 }}
-          animate={{ y: isDismissing ? -550 : 0 }}
-          transition={{
-            duration: isDismissing ? 0.6 : 0.7,
-            ease: isDismissing ? 'easeIn' : 'easeOut',
-          }}
-          onAnimationComplete={() => {
-            if (!spiderArrived) {
-              handleSpiderArrived();
-            } else if (isDismissing) {
-              onClose();
-            }
-          }}
-          className="w-[240px] h-auto object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.85)] pointer-events-none block"
-        />
-
-        {/* White Reminder Card positioned to the left of Spider-Man */}
-        <AnimatePresence>
-          {showCard && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, transition: { duration: 0.15 } }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="absolute right-full mr-3 top-[140px] w-[250px] bg-white text-slate-900 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-100 z-30"
-            >
-              <div className="text-[10px] font-extrabold uppercase tracking-widest text-red-500 mb-1.5">
-                REMINDER
-              </div>
-              <p className="text-slate-900 font-bold text-sm leading-snug break-words mb-3">
-                {message}
-              </p>
-              <div className="flex justify-end pt-1">
-                <button
-                  type="button"
-                  onClick={handleDismiss}
-                  className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-sm transition-colors cursor-pointer"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
   );
 }
 

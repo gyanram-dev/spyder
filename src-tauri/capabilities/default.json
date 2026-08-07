@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Default capabilities for Spydy application",
-  "windows": ["main"],
+  "windows": ["main", "reminder"],
   "permissions": [
     "core:default",
     "autostart:default",

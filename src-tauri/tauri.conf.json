@@ -30,6 +30,7 @@
       {
         "label": "reminder",
         "title": "Spydy Floating Reminder",
+        "url": "index.html?window=reminder",
         "width": 520,
         "height": 440,
         "x": 1400,
@@ -40,6 +41,7 @@
         "decorations": false,
         "alwaysOnTop": true,
         "skipTaskbar": true,
+        "focusable": false,
         "visible": false
       }
     ],
