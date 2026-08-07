@@ -50,12 +50,33 @@ export default function App() {
 
   const [reminders, setReminders] = useState<Reminder[]>(getInitialReminders);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
+
+  // Listen for Pause / Resume events from Tauri System Tray
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    import('@tauri-apps/api/event')
+      .then(({ listen }) => {
+        listen<boolean>('toggle-pause-reminders', (event) => {
+          setIsPaused(!!event.payload);
+        }).then((fn) => {
+          unlisten = fn;
+        });
+      })
+      .catch((err) => {
+        console.warn('Tauri event API not active:', err);
+      });
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
 
   // Sync reminders to localStorage
   useEffect(() => {
@@ -65,6 +86,7 @@ export default function App() {
       console.error('Failed to save reminders to localStorage:', e);
     }
   }, [reminders]);
+
 
   // Set or Update Reminder handler
   const handleSetReminder = () => {
@@ -191,6 +213,8 @@ export default function App() {
   // Time checking logic (checks local system time every second for all reminders)
   useEffect(() => {
     const timer = setInterval(() => {
+      if (isPaused) return;
+
       const now = new Date();
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
@@ -232,7 +256,8 @@ export default function App() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [isPaused]);
+
 
   return (
     <motion.div
