@@ -25,3 +25,8 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Signing Keys & Secrets
+*.key
+*.pem
+!src-tauri/icons/

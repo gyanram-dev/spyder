@@ -112,7 +112,7 @@ export default function App() {
   }, []);
 
   const handleUpdate = async () => {
-    if (!availableUpdate) return;
+    if (isUpdating || !availableUpdate) return;
     setIsUpdating(true);
     try {
       await availableUpdate.downloadAndInstall();
