@@ -1,11 +1,11 @@
 {
-  "version": "0.1.0",
-  "notes": "Initial release of Spydy Reminder.",
+  "version": "0.1.1",
+  "notes": "Spydy Reminder v0.1.1 update.",
   "pub_date": "2026-08-08T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRcDgvekFoT1RDVE9pOS93VGtIWFFqN3JtdU1Hd1NOSlFmVjVORWd2L1BCVk1KWWVGamRXY2d1WHloYVo4MDhlQnFvcDVhMFh1VFB6anhvWTRXNGJtc1VqakdwRTBSMlFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MTgwMjc1CWZpbGU6c3B5ZHktcmVtaW5kZXJfMC4xLjBfeDY0LXNldHVwLmV4ZQpzZTBzVWUwdkZnbmhQYm4rc0tZVnNQRFp5enNkSUhtRU1aMXhONWhrZHdxZnYvRmoyMUUwSlpoWlhiK0JOSjBUU0VmcHRyRHI3Y2xMSTMycnNwajRCdz09Cg==",
-      "url": "https://github.com/gyanram-dev/spyder/releases/download/v0.1.0/spydy-reminder_0.1.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRcDgvekFoT1RDVE1xTTNWUXd0dFh1bmFhQXJKYk51RzVSQXVmMmt5MXNzbm9tSW5mL3grcTQ0aEpkeng3SW9WSWhwTHhQeW5iUDZEOUxkS3EvYXJYbzlhUnpaNnR5eGdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MTgyMzE3CWZpbGU6c3B5ZHktcmVtaW5kZXJfMC4xLjFfeDY0LXNldHVwLmV4ZQpiY25vTnVpT3l0TWh1VHpTZlNpblpKaFh5VW5WbXdpQ3VSNHphVStkQ3l3NHBzcWJMTGR6QzFFa3lScldnTitQSkhEenV5bmZBNk9FQkp4ak5aczVDZz09Cg==",
+      "url": "https://github.com/gyanram-dev/spyder/releases/download/v0.1.1/spydy-reminder_0.1.1_x64-setup.exe"
     }
   }
 }
