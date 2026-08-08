@@ -9,6 +9,10 @@ const isReminderWindow = window.location.search.includes('window=reminder') || w
 if (isReminderWindow) {
   document.documentElement.style.backgroundColor = 'transparent';
   document.body.style.backgroundColor = 'transparent';
+  const rootEl = document.getElementById('root');
+  if (rootEl) {
+    rootEl.style.backgroundColor = 'transparent';
+  }
 } else {
   document.documentElement.style.backgroundColor = '#120305';
   document.body.style.backgroundColor = '#120305';

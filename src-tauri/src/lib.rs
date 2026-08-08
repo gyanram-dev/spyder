@@ -28,6 +28,7 @@ fn show_reminder(app: tauri::AppHandle, message: String) {
         let _ = window.set_always_on_top(true);
         let _ = window.set_focusable(false);
         let _ = window.set_skip_taskbar(true);
+        let _ = window.set_shadow(false);
 
         let now_emit = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis();
         println!("[trigger-reminder emitted] time={}ms message='{}'", now_emit, message);

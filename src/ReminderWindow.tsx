@@ -54,7 +54,7 @@ export default function ReminderWindow() {
         return remaining;
       });
 
-      // Wait for React to commit off-screen (y: -550) initial state, then reveal native window
+      // Wait for React to commit off-screen (y: -650) initial state, then reveal native window
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           import('@tauri-apps/api/core')
@@ -126,7 +126,7 @@ export default function ReminderWindow() {
   const isLeaving = currentState === 'SpiderLeaving';
 
   return (
-    <div className="w-full h-screen bg-transparent flex items-start justify-end pr-6 pt-0 select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="w-full h-screen bg-transparent flex items-start justify-end pr-4 pt-0 select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Notification Container (Spider-Man is the anchor element) */}
       {showSpider && (
         <div className="relative inline-block">
@@ -135,8 +135,8 @@ export default function ReminderWindow() {
             key={currentMessage}
             src={spiderManImg}
             alt="Spider-Man"
-            initial={{ y: -550 }}
-            animate={{ y: isLeaving ? -550 : 0 }}
+            initial={{ y: -650 }}
+            animate={{ y: isLeaving ? -650 : 0 }}
             transition={{
               duration: isLeaving ? 0.6 : 0.7,
               ease: isLeaving ? 'easeIn' : 'easeOut',
