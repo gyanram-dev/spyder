@@ -14,8 +14,8 @@ if (isReminderWindow) {
     rootEl.style.backgroundColor = 'transparent';
   }
 } else {
-  document.documentElement.style.backgroundColor = '#120305';
-  document.body.style.backgroundColor = '#120305';
+  document.documentElement.style.backgroundColor = '#0b071e';
+  document.body.style.backgroundColor = '#0b071e';
 }
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(

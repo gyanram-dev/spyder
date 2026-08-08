@@ -1,7 +1,7 @@
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock,
   Repeat,
@@ -11,7 +11,15 @@ import {
   Pencil,
   Trash2,
   X,
+  ListFilter,
+  Settings,
+  Moon,
+  Calendar,
+  Play,
+  Plus,
+  ChevronDown,
 } from 'lucide-react';
+import timeboundLogo from './assets/logo.png';
 
 export interface Reminder {
   id: string;
@@ -28,7 +36,9 @@ const LOCAL_STORAGE_KEY = 'timebound_reminders';
 
 const getInitialReminders = (): Reminder[] => {
   try {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY) || localStorage.getItem('spydy_reminders');
+    const saved =
+      localStorage.getItem(LOCAL_STORAGE_KEY) ||
+      localStorage.getItem('spydy_reminders');
 
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -56,9 +66,8 @@ const getInitialReminders = (): Reminder[] => {
 };
 
 export default function App() {
-  const [message, setMessage] = useState(
-    'Finish design system review & update assets'
-  );
+  const [activeTab, setActiveTab] = useState<'new' | 'reminders' | 'settings'>('new');
+  const [message, setMessage] = useState('Finish design system review & update assets');
   const [hour, setHour] = useState('09');
   const [minute, setMinute] = useState('30');
   const [ampm, setAmpm] = useState<'AM' | 'PM'>('AM');
@@ -180,10 +189,7 @@ export default function App() {
   // ============================================================
   useEffect(() => {
     try {
-      localStorage.setItem(
-        LOCAL_STORAGE_KEY,
-        JSON.stringify(reminders)
-      );
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(reminders));
     } catch (e) {
       console.error('Failed to save reminders to localStorage:', e);
     }
@@ -199,15 +205,11 @@ export default function App() {
       return;
     }
 
-    const formattedHour = (
-      parseInt(hour, 10) || 12
-    )
+    const formattedHour = (parseInt(hour, 10) || 12)
       .toString()
       .padStart(2, '0');
 
-    const formattedMinute = (
-      parseInt(minute, 10) || 0
-    )
+    const formattedMinute = (parseInt(minute, 10) || 0)
       .toString()
       .padStart(2, '0');
 
@@ -234,9 +236,7 @@ export default function App() {
       setEditingId(null);
     } else {
       const newReminder: Reminder = {
-        id:
-          Date.now().toString() +
-          Math.random().toString(36).substring(2, 6),
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
         message: message.trim(),
         hour: formattedHour,
         minute: formattedMinute,
@@ -266,6 +266,7 @@ export default function App() {
     setMinute(reminder.minute);
     setAmpm(reminder.amPm);
     setEditingId(reminder.id);
+    setActiveTab('new');
   };
 
   // ============================================================
@@ -280,9 +281,7 @@ export default function App() {
   // DELETE REMINDER
   // ============================================================
   const handleDeleteReminder = (id: string) => {
-    setReminders((prev) =>
-      prev.filter((r) => r.id !== id)
-    );
+    setReminders((prev) => prev.filter((r) => r.id !== id));
 
     if (editingId === id) {
       setEditingId(null);
@@ -310,8 +309,7 @@ export default function App() {
   // ============================================================
   const triggerFloatingReminder = async (msgText: string) => {
     const formattedMsg =
-      msgText.trim() ||
-      'Finish design system review & update assets';
+      msgText.trim() || 'Finish design system review & update assets';
 
     console.log(
       `[show_reminder() called] time=${Date.now()}ms message="${formattedMsg}"`
@@ -335,8 +333,7 @@ export default function App() {
     console.log(`[Test Click] time=${Date.now()}ms`);
 
     const testMsg =
-      message.trim() ||
-      'Finish design system review & update assets';
+      message.trim() || 'Finish design system review & update assets';
 
     triggerFloatingReminder(testMsg);
   };
@@ -358,28 +355,16 @@ export default function App() {
 
       // Find matching reminders from the latest ref state.
       const matched = remindersRef.current.filter((reminder) => {
-        if (
-          !reminder.active ||
-          reminder.lastTriggeredDate === todayStr
-        ) {
+        if (!reminder.active || reminder.lastTriggeredDate === todayStr) {
           return false;
         }
 
         let targetHour = parseInt(reminder.hour, 10);
-        const targetMinute = parseInt(
-          reminder.minute,
-          10
-        );
+        const targetMinute = parseInt(reminder.minute, 10);
 
-        if (
-          reminder.amPm === 'PM' &&
-          targetHour < 12
-        ) {
+        if (reminder.amPm === 'PM' && targetHour < 12) {
           targetHour += 12;
-        } else if (
-          reminder.amPm === 'AM' &&
-          targetHour === 12
-        ) {
+        } else if (reminder.amPm === 'AM' && targetHour === 12) {
           targetHour = 0;
         }
 
@@ -394,11 +379,9 @@ export default function App() {
         return;
       }
 
-      const matchedIds = new Set(
-        matched.map((m) => m.id)
-      );
+      const matchedIds = new Set(matched.map((m) => m.id));
 
-      // Mark matched reminders as triggered.
+      // Mark reminders as triggered for today
       setReminders((prev) =>
         prev.map((r) =>
           matchedIds.has(r.id)
@@ -410,402 +393,466 @@ export default function App() {
         )
       );
 
-      // Trigger each reminder exactly once.
-      matched.forEach((reminder) => {
-        triggerFloatingReminder(reminder.message);
-      });
+      // Trigger reminder window for first matching reminder
+      triggerFloatingReminder(matched[0].message);
     }, 1000);
 
-    return () => {
-      clearInterval(timer);
-    };
+    return () => clearInterval(timer);
   }, [isPaused]);
 
+  const hoursList = Array.from({ length: 12 }, (_, i) =>
+    (i + 1).toString().padStart(2, '0')
+  );
+
+  const minutesList = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{
-        duration: 0.5,
-        ease: 'easeOut',
-      }}
-      className="min-h-screen w-full bg-gradient-to-br from-[#24050d] via-[#160207] to-[#090103] text-white flex items-center justify-center p-6 relative overflow-hidden select-none"
-    >
-      {/* Subtle ambient lighting */}
-      <div className="absolute top-[-10%] right-[-10%] w-[450px] h-[450px] bg-[#6e0f1e]/15 rounded-full blur-[100px] pointer-events-none" />
+    <div className="w-full h-screen bg-[#070415] text-white flex select-none font-['Plus_Jakarta_Sans',sans-serif] overflow-hidden relative">
+      {/* Ambient background glows matching logo gradient palette */}
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-pink-600/15 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-600/15 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/3 w-80 h-80 bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="absolute bottom-[-10%] left-[-10%] w-[450px] h-[450px] bg-[#8b1528]/15 rounded-full blur-[100px] pointer-events-none" />
-
-      {/* Main Reminder Card */}
-      <div className="w-full max-w-[460px] min-h-[540px] bg-[#1a0409]/95 backdrop-blur-2xl border border-[#4d0c1a] rounded-[2.25rem] shadow-[0_35px_80px_-15px_rgba(0,0,0,0.9)] p-8 md:p-10 relative z-10 space-y-6 my-auto flex flex-col justify-between">
-
-        {/* Header */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <span className="p-2.5 rounded-xl bg-[#3d0812] text-[#ff4d5a] border border-[#660e1e] shadow-inner">
-              <Bell size={22} />
-            </span>
-
-            <h1 className="text-2xl font-extrabold tracking-tight text-white">
-              TimeBound
-            </h1>
-          </div>
-
-          <p className="text-xs md:text-sm text-[#b88c96] pl-12 font-medium leading-relaxed">
-            Set quick reminders to keep your workflow in sync.
-          </p>
-        </div>
-
-        {/* Message Input */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-[#e0b5be] uppercase tracking-wider block">
-            Reminder Message
-          </label>
-
-          <input
-            type="text"
-            value={message}
-            onChange={(e) =>
-              setMessage(e.target.value)
-            }
-            className="w-full bg-[#110205] border border-[#540c1b] rounded-2xl px-5 py-3.5 text-sm text-white placeholder-[#7a525a] focus:outline-none focus:border-[#9e182e] shadow-inner transition-colors"
-            placeholder="What do you need to be reminded of?"
-          />
-        </div>
-
-        {/* Schedule Section */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-[#e0b5be] uppercase tracking-wider block">
-            Schedule Time
-          </label>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#110205] border border-[#540c1b] rounded-2xl p-3.5 shadow-inner">
-
-            {/* Hour & Minute Inputs */}
-            <div className="flex items-center justify-between sm:justify-start gap-3">
-              <Clock size={18} className="text-[#ff4d5a]" />
-
-              <div className="flex items-center gap-1 font-mono text-lg font-bold bg-[#26050d] px-3 py-1.5 rounded-xl border border-[#540c1b]">
-                <input
-                  type="text"
-                  value={hour}
-                  onChange={(e) => {
-                    const val = e.target.value
-                      .replace(/\D/g, '')
-                      .slice(0, 2);
-
-                    setHour(val);
-                  }}
-                  onBlur={() => {
-                    let num = parseInt(hour, 10);
-
-                    if (isNaN(num) || num < 1) {
-                      num = 12;
-                    }
-
-                    if (num > 12) {
-                      num = 12;
-                    }
-
-                    setHour(
-                      num.toString().padStart(2, '0')
-                    );
-                  }}
-                  className="w-7 text-center bg-transparent text-white focus:outline-none"
+      {/* Main Layout Container */}
+      <div className="flex w-full h-full relative z-10">
+        
+        {/* ============================================================ */}
+        {/* SIDEBAR NAVIGATION */}
+        {/* ============================================================ */}
+        <aside className="w-64 h-full bg-[#0d0722]/80 backdrop-blur-2xl border-r border-purple-500/15 p-6 flex flex-col justify-between shrink-0">
+          
+          <div className="space-y-8">
+            {/* Logo Header */}
+            <div className="flex items-center gap-3">
+              <div className="relative p-1 rounded-2xl bg-gradient-to-tr from-orange-500 via-pink-500 to-purple-600 shadow-[0_0_20px_rgba(225,0,152,0.3)]">
+                <img
+                  src={timeboundLogo}
+                  alt="Timebound Logo"
+                  className="w-12 h-12 rounded-xl object-contain bg-[#0c061e]"
                 />
-
-                <span className="text-[#b88c96] animate-pulse">
-                  :
-                </span>
-
-                <input
-                  type="text"
-                  value={minute}
-                  onChange={(e) => {
-                    const val = e.target.value
-                      .replace(/\D/g, '')
-                      .slice(0, 2);
-
-                    setMinute(val);
-                  }}
-                  onBlur={() => {
-                    let num = parseInt(minute, 10);
-
-                    if (isNaN(num) || num < 0) {
-                      num = 0;
-                    }
-
-                    if (num > 59) {
-                      num = 59;
-                    }
-
-                    setMinute(
-                      num.toString().padStart(2, '0')
-                    );
-                  }}
-                  className="w-7 text-center bg-transparent text-white focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-
-              {/* AM/PM Selector */}
-              <div className="flex items-center bg-[#26050d] p-1 rounded-xl border border-[#540c1b] text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setAmpm('AM')}
-                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    ampm === 'AM'
-                      ? 'bg-[#9e182e] text-white shadow-md'
-                      : 'text-[#b88c96]'
-                  }`}
-                >
-                  AM
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setAmpm('PM')}
-                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    ampm === 'PM'
-                      ? 'bg-[#9e182e] text-white shadow-md'
-                      : 'text-[#b88c96]'
-                  }`}
-                >
-                  PM
-                </button>
-              </div>
-
-              {/* Repeat Button */}
-              <button
-                type="button"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#26050d] border border-[#540c1b] text-xs font-semibold text-[#e0b5be] cursor-default"
-              >
-                <Repeat
-                  size={14}
-                  className="text-[#ff4d5a]"
-                />
-
-                <span>Never</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons & Feedback Toast */}
-        <div className="space-y-2">
-
-          {showSuccess && (
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 rounded-xl px-4 py-2">
-              <CheckCircle2 size={14} />
-              <span>{successMessage}</span>
-            </div>
-          )}
-
-          {showError && (
-            <div className="flex items-center gap-2 text-xs font-semibold text-rose-400 bg-rose-950/40 border border-rose-800/50 rounded-xl px-4 py-2">
-              <AlertCircle size={14} />
-              <span>
-                Please enter a reminder message.
-              </span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-3">
-
-            <button
-              type="button"
-              onClick={handleSetReminder}
-              className="flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-[#9e182e] via-[#b81d37] to-[#d62845] text-white font-bold text-sm shadow-[0_10px_25px_-5px_rgba(158,24,46,0.5)] border border-[#ff4d5a]/30 active:scale-[0.98] transition-transform cursor-pointer"
-            >
-              {editingId
-                ? 'Update Reminder'
-                : 'Set Reminder'}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleTestReminder}
-              className="py-3.5 px-5 rounded-2xl bg-[#26050d] text-[#e0b5be] font-bold text-sm border border-[#540c1b] active:scale-[0.98] transition-transform cursor-pointer"
-            >
-              Test
-            </button>
-          </div>
-        </div>
-
-        {/* Active & Saved Reminders List */}
-        <div className="space-y-3 pt-3 border-t border-[#3d0812]">
-
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-[#e0b5be] uppercase tracking-wider block">
-              Reminders ({reminders.length})
-            </label>
-
-            {editingId && (
-              <button
-                type="button"
-                onClick={handleCancelEdit}
-                className="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1 cursor-pointer"
-              >
-                <X size={12} />
-                Cancel Edit
-              </button>
-            )}
-          </div>
-
-          {reminders.length === 0 ? (
-            <div className="text-center py-5 border border-dashed border-[#540c1b] rounded-2xl text-xs text-[#7a525a]">
-              No reminders scheduled yet. Add one above!
-            </div>
-          ) : (
-            <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-
-              {reminders.map((reminder) => (
-                <div
-                  key={reminder.id}
-                  className={`bg-[#110205] border ${
-                    editingId === reminder.id
-                      ? 'border-[#ff4d5a]'
-                      : 'border-[#540c1b]'
-                  } rounded-2xl p-3.5 shadow-inner flex items-center justify-between gap-3 group hover:border-[#801328] transition-all`}
-                >
-
-                  <div className="flex-1 min-w-0 space-y-1">
-
-                    <p
-                      className="text-sm font-semibold text-white truncate"
-                      title={reminder.message}
-                    >
-                      {reminder.message}
-                    </p>
-
-                    <div className="flex items-center gap-2.5 flex-wrap">
-
-                      <span className="flex items-center gap-1 text-xs font-mono font-bold text-[#b88c96]">
-                        <Clock
-                          size={13}
-                          className="text-[#ff4d5a]"
-                        />
-
-                        {reminder.hour}:{reminder.minute}{' '}
-                        {reminder.amPm}
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          toggleReminderActive(reminder.id)
-                        }
-                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
-                          reminder.active
-                            ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60 hover:bg-emerald-900/60'
-                            : 'bg-zinc-900/80 text-zinc-400 border-zinc-700/60 hover:bg-zinc-800/80'
-                        }`}
-                        title="Click to toggle status"
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            reminder.active
-                              ? 'bg-emerald-400 animate-pulse'
-                              : 'bg-zinc-500'
-                          }`}
-                        />
-
-                        {reminder.active
-                          ? 'Active'
-                          : 'Inactive'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleEditReminder(reminder)
-                      }
-                      className="p-2 rounded-xl bg-[#26050d] text-[#e0b5be] hover:text-white border border-[#540c1b] hover:border-[#ff4d5a]/40 transition-colors cursor-pointer"
-                      title="Edit reminder"
-                    >
-                      <Pencil size={14} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleDeleteReminder(reminder.id)
-                      }
-                      className="p-2 rounded-xl bg-[#26050d] text-rose-400 hover:text-rose-300 border border-[#540c1b] hover:border-rose-800/60 transition-colors cursor-pointer"
-                      title="Delete reminder"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Startup Settings */}
-        <div className="pt-3 border-t border-[#3d0812]">
-
-          <label className="flex items-center justify-between cursor-pointer p-3 rounded-2xl bg-[#110205] border border-[#540c1b] hover:border-[#801328] transition-all select-none">
-
-            <span className="text-xs font-bold text-[#e0b5be] tracking-wide">
-              Launch at Windows startup
-            </span>
-
-            <input
-              type="checkbox"
-              checked={autostartEnabled}
-              onChange={(e) =>
-                handleToggleAutostart(e.target.checked)
-              }
-              className="w-4 h-4 accent-[#ff4d5a] rounded cursor-pointer"
-            />
-          </label>
-        </div>
-
-        {/* Update Notification */}
-        {availableUpdate !== null && (
-          <div className="fixed bottom-4 right-4 z-50 max-w-sm w-full bg-[#1c0409] border border-[#ff4d5a]/40 rounded-2xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="p-2 rounded-xl bg-[#360812] text-[#ff4d5a] shrink-0 border border-[#540c1b]">
-                <Bell size={18} />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white tracking-wide">
-                  TimeBound Update Available
-                </h4>
-                <p className="text-xs text-[#e0b5be] mt-0.5">
-                  Version {availableUpdate.version} is ready to install.
+                <h1 className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
+                  Timebound
+                </h1>
+                <p className="text-[11px] font-semibold text-purple-300/60 uppercase tracking-wider">
+                  Reminder App
                 </p>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#3d0812]">
+
+            {/* Navigation Menu */}
+            <nav className="space-y-2">
               <button
                 type="button"
-                disabled={isUpdating}
-                onClick={() => setAvailableUpdate(null)}
-                className="px-3 py-1.5 rounded-xl bg-[#26050d] hover:bg-[#360812] text-[#e0b5be] hover:text-white border border-[#540c1b] text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                onClick={() => setActiveTab('new')}
+                className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all cursor-pointer relative ${
+                  activeTab === 'new'
+                    ? 'text-white bg-gradient-to-r from-pink-500/20 via-purple-500/15 to-transparent border-l-4 border-pink-500 shadow-sm'
+                    : 'text-purple-200/60 hover:text-white hover:bg-white/5'
+                }`}
               >
-                Later
+                <Bell size={18} className={activeTab === 'new' ? 'text-pink-400' : ''} />
+                <span>New Reminder</span>
               </button>
+
               <button
                 type="button"
-                disabled={isUpdating}
-                onClick={handleUpdate}
-                className="px-3 py-1.5 rounded-xl bg-[#ff4d5a] hover:bg-[#e63946] text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
+                onClick={() => setActiveTab('reminders')}
+                className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold transition-all cursor-pointer relative ${
+                  activeTab === 'reminders'
+                    ? 'text-white bg-gradient-to-r from-pink-500/20 via-purple-500/15 to-transparent border-l-4 border-pink-500 shadow-sm'
+                    : 'text-purple-200/60 hover:text-white hover:bg-white/5'
+                }`}
               >
-                {isUpdating ? 'Updating...' : 'Update Now'}
+                <div className="flex items-center gap-3.5">
+                  <ListFilter size={18} className={activeTab === 'reminders' ? 'text-pink-400' : ''} />
+                  <span>Reminders</span>
+                </div>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-extrabold border border-purple-500/30">
+                  {reminders.length}
+                </span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('settings')}
+                className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all cursor-pointer relative ${
+                  activeTab === 'settings'
+                    ? 'text-white bg-gradient-to-r from-pink-500/20 via-purple-500/15 to-transparent border-l-4 border-pink-500 shadow-sm'
+                    : 'text-purple-200/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Settings size={18} className={activeTab === 'settings' ? 'text-pink-400' : ''} />
+                <span>Settings</span>
+              </button>
+            </nav>
+          </div>
+
+          {/* Sidebar Footer Controls */}
+          <div className="pt-4 border-t border-purple-500/15 flex items-center justify-between text-purple-300/50">
+            <button
+              type="button"
+              onClick={() => setActiveTab('settings')}
+              className="p-2 rounded-xl hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+              title="Settings"
+            >
+              <Settings size={18} />
+            </button>
+            <div className="flex items-center gap-2 text-xs font-semibold text-purple-300/60">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              {isPaused ? 'Paused' : 'Active'}
             </div>
           </div>
-        )}
+        </aside>
+
+        {/* ============================================================ */}
+        {/* MAIN VIEW CONTENT AREA */}
+        {/* ============================================================ */}
+        <main className="flex-1 h-full flex flex-col justify-center items-center p-8 overflow-y-auto relative">
+          
+          <AnimatePresence mode="wait">
+            
+            {/* VIEW 1: NEW / EDIT REMINDER */}
+            {activeTab === 'new' && (
+              <motion.div
+                key="new-tab"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.2 }}
+                className="w-full max-w-[500px] bg-[#120a28]/80 backdrop-blur-2xl border border-purple-500/20 rounded-[2.5rem] p-8 shadow-[0_0_80px_rgba(147,51,234,0.12)] relative"
+              >
+                {/* Form Card Header */}
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-tr from-pink-500/20 to-purple-500/20 text-pink-400 border border-pink-500/30 shadow-inner">
+                    <Bell size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-extrabold text-white tracking-tight">
+                      {editingId ? 'Edit Reminder' : 'Set Reminder'}
+                    </h2>
+                    <p className="text-xs text-purple-200/60 font-medium mt-0.5">
+                      Stay on track. Get things done.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Feedback Toasts */}
+                {showSuccess && (
+                  <div className="mb-4 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2">
+                    <CheckCircle2 size={16} />
+                    <span>{successMessage}</span>
+                  </div>
+                )}
+
+                {showError && (
+                  <div className="mb-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-2">
+                    <AlertCircle size={16} />
+                    <span>Please enter a reminder message!</span>
+                  </div>
+                )}
+
+                {/* Form Controls */}
+                <div className="space-y-5">
+                  
+                  {/* Message Input */}
+                  <div>
+                    <label className="block text-xs font-extrabold text-purple-200/70 tracking-wider uppercase mb-2">
+                      What do you want to do?
+                    </label>
+                    <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-3.5 flex items-center gap-3 transition-all shadow-inner">
+                      <Pencil size={18} className="text-pink-400 shrink-0" />
+                      <input
+                        type="text"
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder="e.g. Study DSA, Call Mom, Gym"
+                        className="bg-transparent border-none text-white font-semibold text-sm placeholder-slate-500 focus:outline-none w-full"
+                      />
+                      {message && (
+                        <button
+                          type="button"
+                          onClick={() => setMessage('')}
+                          className="text-slate-500 hover:text-white cursor-pointer"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Time & Repeat Controls */}
+                  <div className="grid grid-cols-2 gap-4">
+                    
+                    {/* Time Picker */}
+                    <div>
+                      <label className="block text-xs font-extrabold text-purple-200/70 tracking-wider uppercase mb-2">
+                        Time
+                      </label>
+                      <div className="bg-[#0b061a] border border-purple-500/20 rounded-2xl p-2.5 flex items-center gap-2">
+                        <Clock size={16} className="text-pink-400 shrink-0 ml-1" />
+                        
+                        <select
+                          value={hour}
+                          onChange={(e) => setHour(e.target.value)}
+                          className="bg-transparent text-white font-bold text-sm border-none focus:outline-none cursor-pointer"
+                        >
+                          {hoursList.map((h) => (
+                            <option key={h} value={h} className="bg-[#0c061e] text-white">
+                              {h}
+                            </option>
+                          ))}
+                        </select>
+                        
+                        <span className="text-pink-400 font-bold">:</span>
+                        
+                        <select
+                          value={minute}
+                          onChange={(e) => setMinute(e.target.value)}
+                          className="bg-transparent text-white font-bold text-sm border-none focus:outline-none cursor-pointer"
+                        >
+                          {minutesList.map((m) => (
+                            <option key={m} value={m} className="bg-[#0c061e] text-white">
+                              {m}
+                            </option>
+                          ))}
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={() => setAmpm((prev) => (prev === 'AM' ? 'PM' : 'AM'))}
+                          className="ml-auto px-2 py-1 rounded-lg bg-pink-500/20 text-pink-300 font-extrabold text-xs border border-pink-500/30 hover:bg-pink-500/30 transition-colors cursor-pointer"
+                        >
+                          {ampm}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Repeat Setting */}
+                    <div>
+                      <label className="block text-xs font-extrabold text-purple-200/70 tracking-wider uppercase mb-2">
+                        Repeat
+                      </label>
+                      <div className="bg-[#0b061a] border border-purple-500/20 rounded-2xl p-3.5 flex items-center gap-2.5 text-white text-xs font-bold">
+                        <Repeat size={16} className="text-pink-400 shrink-0" />
+                        <span>Daily Schedule</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Primary CTA Buttons */}
+                  <div className="pt-2 space-y-3">
+                    <button
+                      type="button"
+                      onClick={handleSetReminder}
+                      className="w-full bg-gradient-to-r from-[#ff5e3a] via-[#e10098] to-[#6e00ff] hover:opacity-95 text-white font-extrabold py-3.5 px-6 rounded-2xl shadow-[0_10px_30px_rgba(225,0,152,0.3)] transition-all transform hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2.5 text-sm cursor-pointer"
+                    >
+                      <Bell size={18} />
+                      <span>{editingId ? 'Update Reminder' : 'Set Reminder'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleTestReminder}
+                      className="w-full bg-[#180d35] hover:bg-[#201247] text-purple-200 border border-purple-500/30 rounded-2xl py-3 px-5 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Play size={14} className="text-pink-400" />
+                      <span>Test Reminder Window</span>
+                    </button>
+
+                    {editingId && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="w-full bg-transparent hover:bg-white/5 text-purple-300/70 text-xs font-bold py-2 rounded-xl transition-colors cursor-pointer"
+                      >
+                        Cancel Edit
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* VIEW 2: REMINDERS LIST */}
+            {activeTab === 'reminders' && (
+              <motion.div
+                key="reminders-tab"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.2 }}
+                className="w-full max-w-[600px] bg-[#120a28]/80 backdrop-blur-2xl border border-purple-500/20 rounded-[2.5rem] p-8 shadow-[0_0_80px_rgba(147,51,234,0.12)] space-y-6"
+              >
+                <div className="flex items-center justify-between border-b border-purple-500/15 pb-4">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-white tracking-tight">
+                      Scheduled Reminders
+                    </h2>
+                    <p className="text-xs text-purple-200/60 font-medium mt-0.5">
+                      Active reminders will trigger floating popups automatically.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('new')}
+                    className="p-2.5 rounded-xl bg-pink-500/20 text-pink-300 border border-pink-500/30 hover:bg-pink-500/30 transition-colors flex items-center gap-1 text-xs font-bold cursor-pointer"
+                  >
+                    <Plus size={16} />
+                    <span>Add New</span>
+                  </button>
+                </div>
+
+                {reminders.length === 0 ? (
+                  <div className="text-center py-12 text-purple-300/50 space-y-3">
+                    <Bell size={36} className="mx-auto text-purple-400/30" />
+                    <p className="text-sm font-semibold">No reminders scheduled yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                    {reminders.map((reminder) => (
+                      <div
+                        key={reminder.id}
+                        className="bg-[#0b061a] border border-purple-500/20 rounded-2xl p-4 flex items-center justify-between gap-4 hover:border-purple-500/40 transition-all"
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="px-3 py-1.5 rounded-xl bg-pink-500/15 border border-pink-500/30 text-pink-300 font-extrabold text-xs shrink-0">
+                            {reminder.hour}:{reminder.minute} {reminder.amPm}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-white truncate">
+                              {reminder.message}
+                            </p>
+                            <p className="text-[11px] text-purple-300/50 font-medium">
+                              Repeats Daily
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => toggleReminderActive(reminder.id)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                              reminder.active
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-white/5 text-slate-400 border border-white/10'
+                            }`}
+                          >
+                            {reminder.active ? 'Active' : 'Paused'}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleEditReminder(reminder)}
+                            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-purple-200 hover:text-white border border-purple-500/20 transition-colors cursor-pointer"
+                            title="Edit"
+                          >
+                            <Pencil size={14} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteReminder(reminder.id)}
+                            className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* VIEW 3: SETTINGS */}
+            {activeTab === 'settings' && (
+              <motion.div
+                key="settings-tab"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.2 }}
+                className="w-full max-w-[500px] bg-[#120a28]/80 backdrop-blur-2xl border border-purple-500/20 rounded-[2.5rem] p-8 shadow-[0_0_80px_rgba(147,51,234,0.12)] space-y-6"
+              >
+                <div className="border-b border-purple-500/15 pb-4">
+                  <h2 className="text-xl font-extrabold text-white tracking-tight">
+                    Settings & Preferences
+                  </h2>
+                  <p className="text-xs text-purple-200/60 font-medium mt-0.5">
+                    Manage system startup and application behavior.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="flex items-center justify-between cursor-pointer p-4 rounded-2xl bg-[#0b061a] border border-purple-500/20 hover:border-purple-500/40 transition-all select-none">
+                    <span className="text-xs font-bold text-white tracking-wide">
+                      Launch at Windows startup
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={autostartEnabled}
+                      onChange={(e) => handleToggleAutostart(e.target.checked)}
+                      className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
+                    />
+                  </label>
+
+                  <div className="p-4 rounded-2xl bg-[#0b061a] border border-purple-500/20 flex items-center justify-between text-xs font-bold text-white">
+                    <span>Tray Reminder Control</span>
+                    <span className="text-purple-300/60 font-normal">
+                      {isPaused ? 'Reminders Paused via Tray' : 'Reminders Active'}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+
+          {/* ============================================================ */}
+          {/* UPDATE NOTIFICATION BANNER */}
+          {/* ============================================================ */}
+          {availableUpdate !== null && (
+            <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-[#120a28]/95 border border-pink-500/40 rounded-2xl p-4 shadow-[0_10px_40px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="p-2 rounded-xl bg-pink-500/20 text-pink-400 shrink-0 border border-pink-500/30">
+                  <Bell size={18} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white tracking-wide">
+                    Timebound Update Available
+                  </h4>
+                  <p className="text-xs text-purple-200/70 mt-0.5">
+                    Version {availableUpdate.version} is ready to install.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-purple-500/15">
+                <button
+                  type="button"
+                  disabled={isUpdating}
+                  onClick={() => setAvailableUpdate(null)}
+                  className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-purple-200 hover:text-white border border-purple-500/20 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Later
+                </button>
+                <button
+                  type="button"
+                  disabled={isUpdating}
+                  onClick={handleUpdate}
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white text-xs font-extrabold shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
+                >
+                  {isUpdating ? 'Updating...' : 'Update Now'}
+                </button>
+              </div>
+            </div>
+          )}
+
+        </main>
       </div>
-    </motion.div>
+    </div>
   );
 }
