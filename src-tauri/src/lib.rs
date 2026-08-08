@@ -102,7 +102,7 @@ pub fn run() {
             }
 
             // Build system tray menu items
-            let open_item = MenuItemBuilder::with_id("open", "Open Spydy Reminder").build(app)?;
+            let open_item = MenuItemBuilder::with_id("open", "Open TimeBound").build(app)?;
             let pause_item = MenuItemBuilder::with_id("pause", "Pause Reminders").build(app)?;
             let resume_item = MenuItemBuilder::with_id("resume", "Resume Reminders").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Quit").build(app)?;

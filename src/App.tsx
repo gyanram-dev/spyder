@@ -24,11 +24,11 @@ export interface Reminder {
   createdAt: number;
 }
 
-const LOCAL_STORAGE_KEY = 'spydy_reminders';
+const LOCAL_STORAGE_KEY = 'timebound_reminders';
 
 const getInitialReminders = (): Reminder[] => {
   try {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY) || localStorage.getItem('spydy_reminders');
 
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -447,12 +447,12 @@ export default function App() {
             </span>
 
             <h1 className="text-2xl font-extrabold tracking-tight text-white">
-              Spydy Reminder
+              TimeBound
             </h1>
           </div>
 
           <p className="text-xs md:text-sm text-[#b88c96] pl-12 font-medium leading-relaxed">
-            Set quick reminders to keep your workflow webbed together.
+            Set quick reminders to keep your workflow in sync.
           </p>
         </div>
 
@@ -778,7 +778,7 @@ export default function App() {
               </div>
               <div>
                 <h4 className="text-sm font-bold text-white tracking-wide">
-                  Spydy Update Available
+                  TimeBound Update Available
                 </h4>
                 <p className="text-xs text-[#e0b5be] mt-0.5">
                   Version {availableUpdate.version} is ready to install.

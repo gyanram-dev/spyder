@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "spydy-reminder",
-  "version": "0.1.0",
-  "identifier": "com.spydy.reminder",
+  "productName": "TimeBound",
+  "version": "0.1.1",
+  "identifier": "com.timebound.app",
 
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -15,7 +15,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Spydy Reminder",
+        "title": "TimeBound",
         "width": 1200,
         "height": 800,
         "minWidth": 900,
@@ -31,7 +31,7 @@
       },
       {
         "label": "reminder",
-        "title": "Spydy Floating Reminder",
+        "title": "TimeBound Floating Reminder",
         "url": "index.html?window=reminder",
         "width": 520,
         "height": 620,
