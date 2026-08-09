@@ -2,14 +2,62 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
-import spiderManImg from './assets/spider-man-coming-down.png';
+import spidermanImg from './assets/spiderman.png';
+import animeGirlImg from './assets/anime girl.png';
+import ninjaImg from './assets/black ninja.png';
+import foxSpiritImg from './assets/fox spirit.png';
+import littlePandaImg from './assets/little panda.png';
+
+export type ReminderCharacter =
+  | 'spiderman'
+  | 'animeGirl'
+  | 'ninja'
+  | 'foxSpirit'
+  | 'littlePanda';
+
+export const characterAssets: Record<ReminderCharacter, string> = {
+  spiderman: spidermanImg,
+  animeGirl: animeGirlImg,
+  ninja: ninjaImg,
+  foxSpirit: foxSpiritImg,
+  littlePanda: littlePandaImg,
+};
+
+export const characterNames: Record<ReminderCharacter, string> = {
+  spiderman: '🕷 Spider-Man',
+  animeGirl: '🌸 Anime Girl',
+  ninja: '🥷 Black Ninja',
+  foxSpirit: '🦊 Fox Spirit',
+  littlePanda: '🐼 Little Panda',
+};
+
+export const isValidCharacter = (char: any): char is ReminderCharacter => {
+  return [
+    'spiderman',
+    'animeGirl',
+    'ninja',
+    'foxSpirit',
+    'littlePanda',
+  ].includes(char);
+};
+
+export const getValidCharacter = (char: any): ReminderCharacter => {
+  if (isValidCharacter(char)) return char;
+  return 'spiderman';
+};
+
+export interface ReminderQueueItem {
+  message: string;
+  character: ReminderCharacter;
+}
 
 type ReminderState = 'Hidden' | 'SpiderEntering' | 'ShowingCard' | 'SpiderLeaving';
 
 export default function ReminderWindow() {
-  const [queue, setQueue] = useState<string[]>([]);
+  const [queue, setQueue] = useState<ReminderQueueItem[]>([]);
   const [currentState, setCurrentState] = useState<ReminderState>('Hidden');
   const [currentMessage, setCurrentMessage] = useState<string>('');
+  const [currentCharacter, setCurrentCharacter] = useState<ReminderCharacter>('spiderman');
   const exitTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Listen for trigger-reminder event from Tauri backend
@@ -18,10 +66,11 @@ export default function ReminderWindow() {
     let unlistenFn: (() => void) | null = null;
 
     getCurrentWindow()
-      .listen<{ message: string }>('trigger-reminder', (event) => {
+      .listen<{ message: string; character?: ReminderCharacter }>('trigger-reminder', (event) => {
         console.log(`[ReminderWindow received trigger-reminder] time=${Date.now()}ms payload=`, event.payload);
         const msg = event.payload?.message || 'Time to drink water! 💧';
-        setQueue((prev) => [...prev, msg]);
+        const char = getValidCharacter(event.payload?.character);
+        setQueue((prev) => [...prev, { message: msg, character: char }]);
       })
       .then((fn) => {
         if (active) {
@@ -48,8 +97,9 @@ export default function ReminderWindow() {
     if (currentState === 'Hidden' && queue.length > 0) {
       setQueue((prev) => {
         if (prev.length === 0) return prev;
-        const [nextMsg, ...remaining] = prev;
-        setCurrentMessage(nextMsg);
+        const [nextItem, ...remaining] = prev;
+        setCurrentMessage(nextItem.message);
+        setCurrentCharacter(getValidCharacter(nextItem.character));
         setCurrentState('SpiderEntering');
         return remaining;
       });
@@ -133,16 +183,19 @@ export default function ReminderWindow() {
   const showCard = currentState === 'ShowingCard';
   const isLeaving = currentState === 'SpiderLeaving';
 
+  const validCharacterKey = getValidCharacter(currentCharacter);
+  const activeCharacterAsset = characterAssets[validCharacterKey] || characterAssets.spiderman;
+
   return (
     <div className="w-full h-screen bg-transparent flex items-start justify-end pr-4 pt-0 select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Notification Container (Spider-Man is the anchor element) */}
       {showSpider && (
         <div className="relative inline-block">
-          {/* Spider-Man PNG (Primary Animation: straight vertical translateY only, 700ms easeOut) */}
+          {/* Character PNG (Primary Animation: straight vertical translateY only, 700ms easeOut) */}
           <motion.img
-            key={currentMessage}
-            src={spiderManImg}
-            alt="Spider-Man"
+            key={currentMessage + validCharacterKey}
+            src={activeCharacterAsset}
+            alt={validCharacterKey}
             initial={{ y: -650 }}
             animate={{ y: isLeaving ? -650 : 0 }}
             transition={{
@@ -156,7 +209,7 @@ export default function ReminderWindow() {
                 handleSpiderArrived();
               }
             }}
-            className="w-[240px] h-auto object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.8)] pointer-events-none block"
+            className="w-[240px] max-h-[360px] object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.8)] pointer-events-none block"
           />
 
           {/* Reminder Card (Positioned absolutely to the LEFT of Spider-Man anchor) */}

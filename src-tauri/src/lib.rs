@@ -6,14 +6,15 @@ use tauri::{
 use tauri_plugin_autostart::MacosLauncher;
 
 #[tauri::command]
-fn show_reminder(app: tauri::AppHandle, message: String) {
+fn show_reminder(app: tauri::AppHandle, message: String, character: Option<String>) {
+    let char_str = character.unwrap_or_else(|| "spiderman".to_string());
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis();
     println!(
-        "[show_reminder() called] time={}ms message='{}'",
-        now, message
+        "[show_reminder() called] time={}ms message='{}' character='{}'",
+        now, message, char_str
     );
     if let Some(window) = app.get_webview_window("reminder") {
         // Position window at top-right corner of primary monitor
@@ -44,12 +45,12 @@ fn show_reminder(app: tauri::AppHandle, message: String) {
             .unwrap_or_default()
             .as_millis();
         println!(
-            "[trigger-reminder emitted] time={}ms message='{}'",
-            now_emit, message
+            "[trigger-reminder emitted] time={}ms message='{}' character='{}'",
+            now_emit, message, char_str
         );
         let _ = window.emit(
             "trigger-reminder",
-            serde_json::json!({ "message": message }),
+            serde_json::json!({ "message": message, "character": char_str }),
         );
     }
 }

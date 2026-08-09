@@ -21,6 +21,7 @@ import {
   Volume2,
   Music,
   Square,
+  User,
 } from 'lucide-react';
 import timeboundLogo from './assets/logo.png';
 import {
@@ -30,6 +31,12 @@ import {
   saveAudioFile,
   validateAudioFile,
 } from './audioStore';
+import {
+  ReminderCharacter,
+  characterAssets,
+  characterNames,
+  getValidCharacter,
+} from './ReminderWindow';
 
 export type RepeatOption = 'never' | 'every_day' | 'custom_date';
 export type UpdateStatus =
@@ -54,6 +61,7 @@ export interface Reminder {
   soundType?: SoundType;
   soundId?: string;
   soundName?: string;
+  character?: ReminderCharacter;
   active: boolean;
   lastTriggeredDate: string | null;
   createdAt: number;
@@ -99,6 +107,7 @@ const getInitialReminders = (): Reminder[] => {
           soundType: r.soundType || 'none',
           soundId: r.soundId || undefined,
           soundName: r.soundName || undefined,
+          character: getValidCharacter(r.character),
         }));
       }
     }
@@ -115,6 +124,7 @@ const getInitialReminders = (): Reminder[] => {
       amPm: 'AM',
       repeat: 'every_day',
       soundType: 'none',
+      character: 'spiderman',
       active: true,
       lastTriggeredDate: null,
       createdAt: Date.now(),
@@ -133,6 +143,7 @@ export default function App() {
   const [soundType, setSoundType] = useState<SoundType>('none');
   const [soundId, setSoundId] = useState<string | undefined>(undefined);
   const [soundName, setSoundName] = useState<string | undefined>(undefined);
+  const [character, setCharacter] = useState<ReminderCharacter>('spiderman');
   const [isPreviewing, setIsPreviewing] = useState<boolean>(false);
 
   const activeAudioControllerRef = useRef<{ stop: () => void } | null>(null);
@@ -552,6 +563,7 @@ export default function App() {
     const targetSoundType = soundType;
     const targetSoundId = targetSoundType === 'custom' ? soundId : undefined;
     const targetSoundName = targetSoundType === 'custom' ? soundName : undefined;
+    const targetCharacter = getValidCharacter(character);
 
     if (editingId) {
       setReminders((prev) =>
@@ -568,6 +580,7 @@ export default function App() {
                 soundType: targetSoundType,
                 soundId: targetSoundId,
                 soundName: targetSoundName,
+                character: targetCharacter,
                 active: true,
                 lastTriggeredDate: null,
               }
@@ -592,6 +605,7 @@ export default function App() {
         soundType: targetSoundType,
         soundId: targetSoundId,
         soundName: targetSoundName,
+        character: targetCharacter,
         active: true,
         lastTriggeredDate: null,
         createdAt: Date.now(),
@@ -621,6 +635,7 @@ export default function App() {
     setSoundType(reminder.soundType || 'none');
     setSoundId(reminder.soundId);
     setSoundName(reminder.soundName);
+    setCharacter(getValidCharacter(reminder.character));
     setEditingId(reminder.id);
     setActiveTab('new');
   };
@@ -639,6 +654,7 @@ export default function App() {
     setSoundType('none');
     setSoundId(undefined);
     setSoundName(undefined);
+    setCharacter('spiderman');
     stopPreviewAudio();
   };
 
@@ -675,13 +691,16 @@ export default function App() {
   const triggerFloatingReminder = async (
     msgText: string,
     sType?: SoundType,
-    sId?: string
+    sId?: string,
+    char?: ReminderCharacter
   ) => {
     const formattedMsg =
       msgText.trim() || 'Finish design system review & update assets';
 
+    const selectedChar = getValidCharacter(char);
+
     console.log(
-      `[show_reminder() called] time=${Date.now()}ms message="${formattedMsg}" sound=${sType}`
+      `[show_reminder() called] time=${Date.now()}ms message="${formattedMsg}" sound=${sType} character=${selectedChar}`
     );
 
     playReminderSound(sType, sId);
@@ -691,6 +710,7 @@ export default function App() {
 
       await invoke('show_reminder', {
         message: formattedMsg,
+        character: selectedChar,
       });
     } catch (e) {
       console.warn('Tauri API not active:', e);
@@ -706,7 +726,7 @@ export default function App() {
     const testMsg =
       message.trim() || 'Finish design system review & update assets';
 
-    triggerFloatingReminder(testMsg, soundType, soundId);
+    triggerFloatingReminder(testMsg, soundType, soundId, character);
   };
 
   // ============================================================
@@ -799,7 +819,8 @@ export default function App() {
       triggerFloatingReminder(
         matched[0].message,
         matched[0].soundType,
-        matched[0].soundId
+        matched[0].soundId,
+        matched[0].character
       );
     }, 1000);
 
@@ -1066,6 +1087,31 @@ export default function App() {
                     </div>
                   )}
 
+                  {/* Character Setting */}
+                  <div>
+                    <label className="block text-xs font-extrabold text-purple-200/70 tracking-wider uppercase mb-2">
+                      Reminder Character
+                    </label>
+                    <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-2.5 flex items-center gap-2.5 transition-all shadow-inner">
+                      <img
+                        src={characterAssets[character] || characterAssets.spiderman}
+                        alt={characterNames[character] || 'Spider-Man'}
+                        className="w-6 h-6 object-contain shrink-0 ml-0.5"
+                      />
+                      <select
+                        value={character}
+                        onChange={(e) => setCharacter(getValidCharacter(e.target.value))}
+                        className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full"
+                      >
+                        <option value="spiderman" className="bg-[#0c061e] text-white">🕷 Spider-Man</option>
+                        <option value="animeGirl" className="bg-[#0c061e] text-white">🌸 Anime Girl</option>
+                        <option value="ninja" className="bg-[#0c061e] text-white">🥷 Black Ninja</option>
+                        <option value="foxSpirit" className="bg-[#0c061e] text-white">🦊 Fox Spirit</option>
+                        <option value="littlePanda" className="bg-[#0c061e] text-white">🐼 Little Panda</option>
+                      </select>
+                    </div>
+                  </div>
+
                   {/* Sound Setting */}
                   <div>
                     <label className="block text-xs font-extrabold text-purple-200/70 tracking-wider uppercase mb-2">
@@ -1224,6 +1270,7 @@ export default function App() {
                                 : reminder.repeat === 'custom_date'
                                 ? `Until ${formatDateForDisplay(reminder.until)}`
                                 : 'Every day'}
+                              {` • ${characterNames[getValidCharacter(reminder.character)]}`}
                               {reminder.soundType === 'custom' && reminder.soundName
                                 ? ` • ♪ ${reminder.soundName}`
                                 : reminder.soundType === 'default'
