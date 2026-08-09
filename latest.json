@@ -1,11 +1,11 @@
 {
-    "version":  "0.1.4",
-    "notes":  "Timebound v0.1.4 — character asset optimizations, performance improvements, and updater synchronization.",
-    "pub_date":  "2026-08-09T00:00:00Z",
+    "version":  "0.1.5",
+    "notes":  "TimeBound v0.1.5 — single-instance process management, performance improvements, and updater reliability.",
+    "pub_date":  "2026-08-09T12:43:00Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRcDgvekFoT1RDVElhMmthRDR4R2k5UWVETm8ycE0rTzEwTzF6MndKZm43d2x5Q1k2Yld0bmZ1V0srdDVkSytscTZnODJkL0pyVUtuNlh3TWFIdjlBZ0E9PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MTk5OTYxCWZpbGU6VGltZUJvdW5kXzAuMS40X3g2NC1zZXR1cC5leGUKUURQWnhld0pmNmVldjAybW5xRFFicDdrNm5hYVl0WnlzclUyaDFyV2ZxbFliNUpJNWdHQWlybmJ2bmIxcHdtYjAwdit6TUtxT0gvbzZlRGZmdmlnQWc9PQo=",
-                                             "url":  "https://github.com/gyanram-dev/spyder/releases/download/v0.1.4/TimeBound_0.1.4_x64-setup.exe"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRcDgvekFoT1RDVElhMmthRDR4R2k5UWVETm8ycE0rTzEwTzF6MndKZm43d2x5Q1k2Yld0bmZ1V0srdDVkSytscTZnODJkL0pyVUtuNlh3TWFIdjlBZ0E9PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MjA4NTU4CWZpbGU6VGltZUJvdW5kXzAuMS41X3g2NC1zZXR1cC5leGUKVUxRSlkyVG50c2lxd0tqYzh1enZhcXF6YVh0LzV6UjFFeHdrNmVjM1pDRTFXVTRzYjh1dm01MFlVOHlyUGtWNDZ4d2N2REl0R2J3dk52Uk16K2h1QWc9PQo=",
+                                             "url":  "https://github.com/gyanram-dev/spyder/releases/download/v0.1.5/TimeBound_0.1.5_x64-setup.exe"
                                          }
                   }
 }
