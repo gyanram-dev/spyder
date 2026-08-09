@@ -82,6 +82,10 @@ export default function ReminderWindow() {
 
   // 3. Complete exit animation -> transition to Hidden -> signal Rust backend to hide window
   const handleExitComplete = () => {
+    import('@tauri-apps/api/event')
+      .then(({ emit }) => emit('stop-reminder-sound'))
+      .catch(() => {});
+
     if (exitTimerRef.current) {
       clearTimeout(exitTimerRef.current);
       exitTimerRef.current = null;
@@ -112,6 +116,10 @@ export default function ReminderWindow() {
   // 2. Dismiss sequence: Fade out card -> Slide Spider-Man up -> Hide window after animation
   const handleDismiss = () => {
     console.log(`[Dismiss clicked] time=${Date.now()}ms currentState=${currentState}`);
+    import('@tauri-apps/api/event')
+      .then(({ emit }) => emit('stop-reminder-sound'))
+      .catch(() => {});
+
     if (currentState === 'ShowingCard') {
       setCurrentState('SpiderLeaving');
       // Schedule guaranteed window hide after exit animation completes (150ms fade + 600ms slide = 750ms)

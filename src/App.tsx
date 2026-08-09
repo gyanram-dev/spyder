@@ -18,8 +18,18 @@ import {
   Play,
   Plus,
   ChevronDown,
+  Volume2,
+  Music,
+  Square,
 } from 'lucide-react';
 import timeboundLogo from './assets/logo.png';
+import {
+  playDefaultChimeSound,
+  playCustomAudioBlob,
+  getAudioFile,
+  saveAudioFile,
+  validateAudioFile,
+} from './audioStore';
 
 export type RepeatOption = 'never' | 'every_day' | 'custom_date';
 export type UpdateStatus =
@@ -31,6 +41,8 @@ export type UpdateStatus =
   | 'installing'
   | 'error';
 
+export type SoundType = 'none' | 'default' | 'custom';
+
 export interface Reminder {
   id: string;
   message: string;
@@ -39,6 +51,9 @@ export interface Reminder {
   amPm: 'AM' | 'PM';
   repeat?: RepeatOption;
   until?: string;
+  soundType?: SoundType;
+  soundId?: string;
+  soundName?: string;
   active: boolean;
   lastTriggeredDate: string | null;
   createdAt: number;
@@ -81,6 +96,9 @@ const getInitialReminders = (): Reminder[] => {
           ...r,
           repeat: r.repeat || 'every_day',
           until: r.until || undefined,
+          soundType: r.soundType || 'none',
+          soundId: r.soundId || undefined,
+          soundName: r.soundName || undefined,
         }));
       }
     }
@@ -96,6 +114,7 @@ const getInitialReminders = (): Reminder[] => {
       minute: '30',
       amPm: 'AM',
       repeat: 'every_day',
+      soundType: 'none',
       active: true,
       lastTriggeredDate: null,
       createdAt: Date.now(),
@@ -111,6 +130,14 @@ export default function App() {
   const [ampm, setAmpm] = useState<'AM' | 'PM'>('AM');
   const [repeat, setRepeat] = useState<RepeatOption>('never');
   const [untilDate, setUntilDate] = useState<string>(getTodayLocalDateStr());
+  const [soundType, setSoundType] = useState<SoundType>('none');
+  const [soundId, setSoundId] = useState<string | undefined>(undefined);
+  const [soundName, setSoundName] = useState<string | undefined>(undefined);
+  const [isPreviewing, setIsPreviewing] = useState<boolean>(false);
+
+  const activeAudioControllerRef = useRef<{ stop: () => void } | null>(null);
+  const previewAudioControllerRef = useRef<{ stop: () => void } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '').slice(0, 2);
@@ -352,6 +379,135 @@ export default function App() {
   }, []);
 
   // ============================================================
+  // AUDIO PLAYBACK & DISMISS LISTENERS
+  // ============================================================
+  const stopActiveReminderAudio = () => {
+    if (activeAudioControllerRef.current) {
+      activeAudioControllerRef.current.stop();
+      activeAudioControllerRef.current = null;
+    }
+  };
+
+  const stopPreviewAudio = () => {
+    if (previewAudioControllerRef.current) {
+      previewAudioControllerRef.current.stop();
+      previewAudioControllerRef.current = null;
+    }
+    setIsPreviewing(false);
+  };
+
+  const playReminderSound = async (type?: SoundType, id?: string) => {
+    stopActiveReminderAudio();
+
+    if (!type || type === 'none') {
+      return;
+    }
+
+    if (type === 'default') {
+      activeAudioControllerRef.current = playDefaultChimeSound();
+      return;
+    }
+
+    if (type === 'custom' && id) {
+      try {
+        const blob = await getAudioFile(id);
+        if (blob) {
+          activeAudioControllerRef.current = playCustomAudioBlob(blob);
+        }
+      } catch (e) {
+        console.warn('Failed to play custom audio for reminder:', e);
+      }
+    }
+  };
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    import('@tauri-apps/api/event')
+      .then(({ listen }) => {
+        listen('stop-reminder-sound', () => {
+          stopActiveReminderAudio();
+        }).then((fn) => {
+          unlisten = fn;
+        });
+      })
+      .catch((err) => {
+        console.warn('Tauri event API not active:', err);
+      });
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
+
+  const handleTogglePreview = async () => {
+    if (isPreviewing) {
+      stopPreviewAudio();
+      return;
+    }
+
+    if (soundType === 'none') return;
+
+    if (soundType === 'default') {
+      setIsPreviewing(true);
+      const controller = playDefaultChimeSound();
+      previewAudioControllerRef.current = controller;
+      setTimeout(() => {
+        setIsPreviewing(false);
+        previewAudioControllerRef.current = null;
+      }, 1500);
+      return;
+    }
+
+    if (soundType === 'custom' && soundId) {
+      try {
+        const blob = await getAudioFile(soundId);
+        if (!blob) {
+          setShowError(true);
+          setSuccessMessage('Could not load custom audio file');
+          setTimeout(() => setShowError(false), 3000);
+          return;
+        }
+        setIsPreviewing(true);
+        const controller = playCustomAudioBlob(blob);
+        previewAudioControllerRef.current = controller;
+      } catch (e) {
+        console.warn('Failed to preview custom audio:', e);
+        setIsPreviewing(false);
+      }
+    }
+  };
+
+  const handleChooseAudioFile = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateAudioFile(file);
+    if (!validation.valid) {
+      setShowError(true);
+      setSuccessMessage(validation.error || 'Invalid audio file');
+      setTimeout(() => setShowError(false), 3000);
+      return;
+    }
+
+    try {
+      const saved = await saveAudioFile(file);
+      setSoundId(saved.soundId);
+      setSoundName(saved.soundName);
+    } catch (err: any) {
+      console.error('Failed to save audio file:', err);
+      setShowError(true);
+      setSuccessMessage('Failed to save audio file');
+      setTimeout(() => setShowError(false), 3000);
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // ============================================================
   // SYNC REMINDERS TO LOCAL STORAGE
   // ============================================================
   useEffect(() => {
@@ -393,6 +549,10 @@ export default function App() {
         ? untilDate || getTodayLocalDateStr()
         : undefined;
 
+    const targetSoundType = soundType;
+    const targetSoundId = targetSoundType === 'custom' ? soundId : undefined;
+    const targetSoundName = targetSoundType === 'custom' ? soundName : undefined;
+
     if (editingId) {
       setReminders((prev) =>
         prev.map((r) =>
@@ -405,6 +565,9 @@ export default function App() {
                 amPm: ampm,
                 repeat: targetRepeat,
                 until: targetUntil,
+                soundType: targetSoundType,
+                soundId: targetSoundId,
+                soundName: targetSoundName,
                 active: true,
                 lastTriggeredDate: null,
               }
@@ -426,6 +589,9 @@ export default function App() {
         amPm: ampm,
         repeat: targetRepeat,
         until: targetUntil,
+        soundType: targetSoundType,
+        soundId: targetSoundId,
+        soundName: targetSoundName,
         active: true,
         lastTriggeredDate: null,
         createdAt: Date.now(),
@@ -452,6 +618,9 @@ export default function App() {
     setAmpm(reminder.amPm);
     setRepeat(reminder.repeat || 'every_day');
     setUntilDate(reminder.until || getTodayLocalDateStr());
+    setSoundType(reminder.soundType || 'none');
+    setSoundId(reminder.soundId);
+    setSoundName(reminder.soundName);
     setEditingId(reminder.id);
     setActiveTab('new');
   };
@@ -467,6 +636,10 @@ export default function App() {
     setAmpm('AM');
     setRepeat('never');
     setUntilDate(getTodayLocalDateStr());
+    setSoundType('none');
+    setSoundId(undefined);
+    setSoundName(undefined);
+    stopPreviewAudio();
   };
 
   // ============================================================
@@ -499,13 +672,19 @@ export default function App() {
   // ============================================================
   // TRIGGER NATIVE FLOATING REMINDER WINDOW
   // ============================================================
-  const triggerFloatingReminder = async (msgText: string) => {
+  const triggerFloatingReminder = async (
+    msgText: string,
+    sType?: SoundType,
+    sId?: string
+  ) => {
     const formattedMsg =
       msgText.trim() || 'Finish design system review & update assets';
 
     console.log(
-      `[show_reminder() called] time=${Date.now()}ms message="${formattedMsg}"`
+      `[show_reminder() called] time=${Date.now()}ms message="${formattedMsg}" sound=${sType}`
     );
+
+    playReminderSound(sType, sId);
 
     try {
       const { invoke } = await import('@tauri-apps/api/core');
@@ -527,7 +706,7 @@ export default function App() {
     const testMsg =
       message.trim() || 'Finish design system review & update assets';
 
-    triggerFloatingReminder(testMsg);
+    triggerFloatingReminder(testMsg, soundType, soundId);
   };
 
   // ============================================================
@@ -617,7 +796,11 @@ export default function App() {
       );
 
       // Trigger reminder window for first matching reminder
-      triggerFloatingReminder(matched[0].message);
+      triggerFloatingReminder(
+        matched[0].message,
+        matched[0].soundType,
+        matched[0].soundId
+      );
     }, 1000);
 
     return () => clearInterval(timer);
@@ -883,6 +1066,75 @@ export default function App() {
                     </div>
                   )}
 
+                  {/* Sound Setting */}
+                  <div>
+                    <label className="block text-xs font-extrabold text-purple-200/70 tracking-wider uppercase mb-2">
+                      Sound
+                    </label>
+                    <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-2.5 flex items-center gap-2 transition-all shadow-inner">
+                      <Volume2 size={16} className="text-pink-400 shrink-0 ml-1" />
+                      <select
+                        value={soundType}
+                        onChange={(e) => {
+                          const val = e.target.value as SoundType;
+                          setSoundType(val);
+                          stopPreviewAudio();
+                        }}
+                        className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full"
+                      >
+                        <option value="none" className="bg-[#0c061e] text-white">No sound</option>
+                        <option value="default" className="bg-[#0c061e] text-white">Default sound</option>
+                        <option value="custom" className="bg-[#0c061e] text-white">Custom sound</option>
+                      </select>
+
+                      {soundType !== 'none' && (
+                        <button
+                          type="button"
+                          onClick={handleTogglePreview}
+                          className="ml-auto px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 font-extrabold text-xs border border-purple-500/30 transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                          title="Preview audio"
+                        >
+                          {isPreviewing ? (
+                            <Square size={12} className="text-rose-400 fill-rose-400" />
+                          ) : (
+                            <Play size={12} className="text-pink-400 fill-pink-400" />
+                          )}
+                          <span>{isPreviewing ? 'Stop' : 'Preview'}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Conditional Custom Sound File Picker */}
+                  {soundType === 'custom' && (
+                    <div>
+                      <div className="bg-[#0b061a] border border-purple-500/20 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-inner">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Music size={16} className="text-pink-400 shrink-0" />
+                          <span className="text-xs font-bold text-white truncate">
+                            {soundName || 'No audio file selected'}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-3 py-1.5 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30 text-xs font-bold transition-all shrink-0 cursor-pointer"
+                        >
+                          Choose audio file
+                        </button>
+
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".mp3,.wav,.ogg,.m4a"
+                          onChange={handleChooseAudioFile}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   {/* Primary CTA Buttons */}
                   <div className="pt-2 space-y-3">
                     <button
@@ -972,6 +1224,11 @@ export default function App() {
                                 : reminder.repeat === 'custom_date'
                                 ? `Until ${formatDateForDisplay(reminder.until)}`
                                 : 'Every day'}
+                              {reminder.soundType === 'custom' && reminder.soundName
+                                ? ` • ♪ ${reminder.soundName}`
+                                : reminder.soundType === 'default'
+                                ? ' • ♪ Default Sound'
+                                : ''}
                             </p>
                           </div>
                         </div>
