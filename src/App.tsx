@@ -21,18 +21,43 @@ import {
 } from 'lucide-react';
 import timeboundLogo from './assets/logo.png';
 
+export type RepeatOption = 'never' | 'every_day' | 'custom_date';
+
 export interface Reminder {
   id: string;
   message: string;
   hour: string;
   minute: string;
   amPm: 'AM' | 'PM';
+  repeat?: RepeatOption;
+  until?: string;
   active: boolean;
   lastTriggeredDate: string | null;
   createdAt: number;
 }
 
 const LOCAL_STORAGE_KEY = 'timebound_reminders';
+
+const getTodayLocalDateStr = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatDateForDisplay = (dateStr?: string): string => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
+  const [year, month, day] = parts;
+  const d = new Date(year, month - 1, day);
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
 
 const getInitialReminders = (): Reminder[] => {
   try {
@@ -44,7 +69,11 @@ const getInitialReminders = (): Reminder[] => {
       const parsed = JSON.parse(saved);
 
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.map((r: any) => ({
+          ...r,
+          repeat: r.repeat || 'every_day',
+          until: r.until || undefined,
+        }));
       }
     }
   } catch (e) {
@@ -58,6 +87,7 @@ const getInitialReminders = (): Reminder[] => {
       hour: '09',
       minute: '30',
       amPm: 'AM',
+      repeat: 'every_day',
       active: true,
       lastTriggeredDate: null,
       createdAt: Date.now(),
@@ -71,6 +101,52 @@ export default function App() {
   const [hour, setHour] = useState('09');
   const [minute, setMinute] = useState('30');
   const [ampm, setAmpm] = useState<'AM' | 'PM'>('AM');
+  const [repeat, setRepeat] = useState<RepeatOption>('never');
+  const [untilDate, setUntilDate] = useState<string>(getTodayLocalDateStr());
+
+  const handleHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 2);
+    if (raw === '') {
+      setHour('');
+      return;
+    }
+    const val = parseInt(raw, 10);
+    if (val > 12) {
+      setHour('12');
+    } else {
+      setHour(raw);
+    }
+  };
+
+  const handleHourBlur = () => {
+    let val = parseInt(hour, 10);
+    if (isNaN(val) || val < 1 || val > 12) {
+      val = 12;
+    }
+    setHour(val.toString().padStart(2, '0'));
+  };
+
+  const handleMinuteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 2);
+    if (raw === '') {
+      setMinute('');
+      return;
+    }
+    const val = parseInt(raw, 10);
+    if (val > 59) {
+      setMinute('59');
+    } else {
+      setMinute(raw);
+    }
+  };
+
+  const handleMinuteBlur = () => {
+    let val = parseInt(minute, 10);
+    if (isNaN(val) || val < 0 || val > 59) {
+      val = 0;
+    }
+    setMinute(val.toString().padStart(2, '0'));
+  };
 
   const [reminders, setReminders] = useState<Reminder[]>(getInitialReminders);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -205,13 +281,26 @@ export default function App() {
       return;
     }
 
-    const formattedHour = (parseInt(hour, 10) || 12)
-      .toString()
-      .padStart(2, '0');
+    let parsedHour = parseInt(hour, 10);
+    if (isNaN(parsedHour) || parsedHour < 1 || parsedHour > 12) {
+      parsedHour = 12;
+    }
+    const formattedHour = parsedHour.toString().padStart(2, '0');
 
-    const formattedMinute = (parseInt(minute, 10) || 0)
-      .toString()
-      .padStart(2, '0');
+    let parsedMinute = parseInt(minute, 10);
+    if (isNaN(parsedMinute) || parsedMinute < 0 || parsedMinute > 59) {
+      parsedMinute = 0;
+    }
+    const formattedMinute = parsedMinute.toString().padStart(2, '0');
+
+    setHour(formattedHour);
+    setMinute(formattedMinute);
+
+    const targetRepeat = repeat;
+    const targetUntil =
+      targetRepeat === 'custom_date'
+        ? untilDate || getTodayLocalDateStr()
+        : undefined;
 
     if (editingId) {
       setReminders((prev) =>
@@ -223,6 +312,9 @@ export default function App() {
                 hour: formattedHour,
                 minute: formattedMinute,
                 amPm: ampm,
+                repeat: targetRepeat,
+                until: targetUntil,
+                active: true,
                 lastTriggeredDate: null,
               }
             : r
@@ -241,6 +333,8 @@ export default function App() {
         hour: formattedHour,
         minute: formattedMinute,
         amPm: ampm,
+        repeat: targetRepeat,
+        until: targetUntil,
         active: true,
         lastTriggeredDate: null,
         createdAt: Date.now(),
@@ -265,6 +359,8 @@ export default function App() {
     setHour(reminder.hour);
     setMinute(reminder.minute);
     setAmpm(reminder.amPm);
+    setRepeat(reminder.repeat || 'every_day');
+    setUntilDate(reminder.until || getTodayLocalDateStr());
     setEditingId(reminder.id);
     setActiveTab('new');
   };
@@ -275,6 +371,11 @@ export default function App() {
   const handleCancelEdit = () => {
     setEditingId(null);
     setMessage('');
+    setHour('09');
+    setMinute('30');
+    setAmpm('AM');
+    setRepeat('never');
+    setUntilDate(getTodayLocalDateStr());
   };
 
   // ============================================================
@@ -352,10 +453,38 @@ export default function App() {
       const currentSecond = now.getSeconds();
 
       const todayStr = now.toDateString();
+      const todayLocalDateStr = getTodayLocalDateStr();
+
+      // Deactivate expired custom-date reminders
+      const expiredIds = new Set(
+        remindersRef.current
+          .filter(
+            (r) =>
+              r.active &&
+              r.repeat === 'custom_date' &&
+              r.until &&
+              todayLocalDateStr > r.until
+          )
+          .map((r) => r.id)
+      );
+
+      if (expiredIds.size > 0) {
+        setReminders((prev) =>
+          prev.map((r) => (expiredIds.has(r.id) ? { ...r, active: false } : r))
+        );
+      }
 
       // Find matching reminders from the latest ref state.
       const matched = remindersRef.current.filter((reminder) => {
         if (!reminder.active || reminder.lastTriggeredDate === todayStr) {
+          return false;
+        }
+
+        if (
+          reminder.repeat === 'custom_date' &&
+          reminder.until &&
+          todayLocalDateStr > reminder.until
+        ) {
           return false;
         }
 
@@ -381,16 +510,19 @@ export default function App() {
 
       const matchedIds = new Set(matched.map((m) => m.id));
 
-      // Mark reminders as triggered for today
+      // Mark reminders as triggered for today (and deactivate if 'never')
       setReminders((prev) =>
-        prev.map((r) =>
-          matchedIds.has(r.id)
-            ? {
-                ...r,
-                lastTriggeredDate: todayStr,
-              }
-            : r
-        )
+        prev.map((r) => {
+          if (matchedIds.has(r.id)) {
+            const isOneTime = r.repeat === 'never';
+            return {
+              ...r,
+              lastTriggeredDate: todayStr,
+              active: isOneTime ? false : r.active,
+            };
+          }
+          return r;
+        })
       );
 
       // Trigger reminder window for first matching reminder
@@ -399,12 +531,6 @@ export default function App() {
 
     return () => clearInterval(timer);
   }, [isPaused]);
-
-  const hoursList = Array.from({ length: 12 }, (_, i) =>
-    (i + 1).toString().padStart(2, '0')
-  );
-
-  const minutesList = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
 
   return (
     <div className="w-full h-screen bg-[#070415] text-white flex select-none font-['Plus_Jakarta_Sans',sans-serif] overflow-hidden relative">
@@ -590,34 +716,32 @@ export default function App() {
                       <label className="block text-xs font-extrabold text-purple-200/70 tracking-wider uppercase mb-2">
                         Time
                       </label>
-                      <div className="bg-[#0b061a] border border-purple-500/20 rounded-2xl p-2.5 flex items-center gap-2">
+                      <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-2.5 flex items-center gap-1.5 transition-all shadow-inner">
                         <Clock size={16} className="text-pink-400 shrink-0 ml-1" />
                         
-                        <select
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={2}
                           value={hour}
-                          onChange={(e) => setHour(e.target.value)}
-                          className="bg-transparent text-white font-bold text-sm border-none focus:outline-none cursor-pointer"
-                        >
-                          {hoursList.map((h) => (
-                            <option key={h} value={h} className="bg-[#0c061e] text-white">
-                              {h}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={handleHourChange}
+                          onBlur={handleHourBlur}
+                          className="w-8 bg-transparent text-white font-bold text-sm border-none focus:outline-none text-center p-0"
+                          placeholder="09"
+                        />
                         
                         <span className="text-pink-400 font-bold">:</span>
                         
-                        <select
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={2}
                           value={minute}
-                          onChange={(e) => setMinute(e.target.value)}
-                          className="bg-transparent text-white font-bold text-sm border-none focus:outline-none cursor-pointer"
-                        >
-                          {minutesList.map((m) => (
-                            <option key={m} value={m} className="bg-[#0c061e] text-white">
-                              {m}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={handleMinuteChange}
+                          onBlur={handleMinuteBlur}
+                          className="w-8 bg-transparent text-white font-bold text-sm border-none focus:outline-none text-center p-0"
+                          placeholder="00"
+                        />
 
                         <button
                           type="button"
@@ -634,12 +758,39 @@ export default function App() {
                       <label className="block text-xs font-extrabold text-purple-200/70 tracking-wider uppercase mb-2">
                         Repeat
                       </label>
-                      <div className="bg-[#0b061a] border border-purple-500/20 rounded-2xl p-3.5 flex items-center gap-2.5 text-white text-xs font-bold">
-                        <Repeat size={16} className="text-pink-400 shrink-0" />
-                        <span>Daily Schedule</span>
+                      <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-2.5 flex items-center gap-2 transition-all shadow-inner">
+                        <Repeat size={16} className="text-pink-400 shrink-0 ml-1" />
+                        <select
+                          value={repeat}
+                          onChange={(e) => setRepeat(e.target.value as RepeatOption)}
+                          className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full"
+                        >
+                          <option value="never" className="bg-[#0c061e] text-white">Never</option>
+                          <option value="every_day" className="bg-[#0c061e] text-white">Every day</option>
+                          <option value="custom_date" className="bg-[#0c061e] text-white">Custom date</option>
+                        </select>
                       </div>
                     </div>
                   </div>
+
+                  {/* Conditional Until Date field */}
+                  {repeat === 'custom_date' && (
+                    <div>
+                      <label className="block text-xs font-extrabold text-purple-200/70 tracking-wider uppercase mb-2">
+                        Until
+                      </label>
+                      <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-2.5 flex items-center gap-2 transition-all shadow-inner">
+                        <Calendar size={16} className="text-pink-400 shrink-0 ml-1" />
+                        <input
+                          type="date"
+                          value={untilDate}
+                          min={getTodayLocalDateStr()}
+                          onChange={(e) => setUntilDate(e.target.value)}
+                          className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full [color-scheme:dark]"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Primary CTA Buttons */}
                   <div className="pt-2 space-y-3">
@@ -725,7 +876,11 @@ export default function App() {
                               {reminder.message}
                             </p>
                             <p className="text-[11px] text-purple-300/50 font-medium">
-                              Repeats Daily
+                              {reminder.repeat === 'never'
+                                ? 'One-time'
+                                : reminder.repeat === 'custom_date'
+                                ? `Until ${formatDateForDisplay(reminder.until)}`
+                                : 'Every day'}
                             </p>
                           </div>
                         </div>
