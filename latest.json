@@ -1,11 +1,11 @@
 {
-    "version":  "0.1.5",
-    "notes":  "TimeBound v0.1.5 release.",
-    "pub_date":  "2026-08-09T21:50:00Z",
-    "platforms":  {
-                      "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRcDgvekFoT1RDVElZcHBkdTFnMW56ZE1PTEZ3VjFudFkyUjZzK0hEWWNxb0lEaHppTFoxM2EycFlZdlMxdmlzWlhId3V5QW9VQXAwMEZraS94NlRnQT09CnRydXN0ZWQgY29tbWVudDogdGltZXN0YW1wOjE3ODYyMjIyMjgJZmlsZTpUaW1lQm91bmRfMC4xLjVfeDY0LXNldHVwLmV4ZQpDTVlsQStXSEZqaS8yOGx5ZEVvYXZpMnd3TzJadXJndXRwMzV1TlpJZXQvSlpvSlBncjV3blgvaWd5YVR5OG4zS3pzNTRiTVQ5VnF0aVdtUzdRUXdDZz09Cg==",
-                                             "url":  "https://github.com/gyanram-dev/spyder/releases/download/v0.1.5/TimeBound_0.1.5_x64-setup.exe"
-                                         }
-                  }
+  "notes": "TimeBound v0.1.5 release.",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUldRYmhaMSthdzJnU1JIOGVpNnBpcUthcVVOcHVVRHAzZkhlZnBLRnQxM0Q0OU1qelpadVIreVltWUpHZTFhRXVIRzJ3QUllUm9Jb0dzWTJoWjY2MTRQTDZJeEdWUmx4MndrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MjIyMjI4CWZpbGU6VGltZUJvdW5kXzAuMS41X3g2NC1zZXR1cC5leGUKb1EvdFRJQUNFSGRiZm5qR0pLV2tnSWY2d1VRbTdrMWNWRkFYU25HNHBKWjRSNVBUOHpDNG9sRDJYUmNwWkoyT1JRbEpQK2xXSUdWSFdVLzNST3hmREE9PQ==",
+      "url": "https://github.com/gyanram-dev/spyder/releases/download/v0.1.5/TimeBound_0.1.5_x64-setup.exe"
+    }
+  },
+  "pub_date": "2026-08-09T21:50:00Z",
+  "version": "0.1.5"
 }
