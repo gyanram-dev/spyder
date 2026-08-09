@@ -1,11 +1,11 @@
 {
-  "version": "0.1.3",
-  "notes": "Timebound v0.1.3 â€” new reminder characters and improvements.",
-  "pub_date": "2026-08-09T00:00:00Z",
-  "platforms": {
-    "windows-x86_64": {
-      "signature": "YOUR_GENERATED_0.1.3_SIGNATURE",
-      "url": "https://github.com/gyanram-dev/spyder/releases/download/v0.1.3/TimeBound_0.1.3_x64-setup.exe"
-    }
-  }
+    "version":  "0.1.3",
+    "notes":  "Timebound v0.1.3 — new reminder characters and animation improvements.",
+    "pub_date":  "2026-08-09T00:00:00Z",
+    "platforms":  {
+                      "windows-x86_64":  {
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRcDgvekFoT1RDVExZWERONG4wWHpKZjNkUkV6Qm5SNWl5MzBBa3dUUHNQTzhrZ0ZmUE93QTRSZEs1YnVsSXM4ZWNKZWdaMnl6YWkvNG1ZMVZsTG5OT3E5S3oyOGFpYWdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MTk4NjY0CWZpbGU6VGltZUJvdW5kXzAuMS4zX3g2NC1zZXR1cC5leGUKdXVpTFZGTkN4QTN0L25ML0JpV3RBWDQ4SEtTUGsxd3VxQ3Njemd0OWlEekM3UWgxOElnWWYvSUlIWmJETHVzK3BpOFBhTjNNTGp4aFJabm1NcElHQ2c9PQo=",
+                                             "url":  "https://github.com/gyanram-dev/spyder/releases/download/v0.1.3/TimeBound_0.1.3_x64-setup.exe"
+                                         }
+                  }
 }
