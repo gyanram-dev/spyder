@@ -22,6 +22,14 @@ import {
 import timeboundLogo from './assets/logo.png';
 
 export type RepeatOption = 'never' | 'every_day' | 'custom_date';
+export type UpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'up-to-date'
+  | 'update-available'
+  | 'downloading'
+  | 'installing'
+  | 'error';
 
 export interface Reminder {
   id: string;
@@ -152,10 +160,16 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [autostartEnabled, setAutostartEnabled] = useState(false);
+
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
   const [availableUpdate, setAvailableUpdate] = useState<any>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateErrorMsg, setUpdateErrorMsg] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>('0.1.2');
+  const [installProgressText, setInstallProgressText] = useState<string>('');
+  const [bannerDismissed, setBannerDismissed] = useState<boolean>(false);
 
   const remindersRef = useRef<Reminder[]>(reminders);
+  const hasCheckedOnMountRef = useRef<boolean>(false);
 
   useEffect(() => {
     remindersRef.current = reminders;
@@ -166,36 +180,113 @@ export default function App() {
   const [successMessage, setSuccessMessage] = useState('');
 
   // ============================================================
-  // AUTO UPDATE CHECK
+  // FETCH APP VERSION FROM TAURI
   // ============================================================
   useEffect(() => {
-    const checkForUpdates = async () => {
-      try {
-        const update = await check();
-
-        if (update) {
-          console.log(
-            `Update available: ${update.currentVersion} → ${update.version}`
-          );
-          setAvailableUpdate(update);
-        }
-      } catch (error) {
-        console.error('UPDATE CHECK FAILED:', error);
-      }
-    };
-
-    checkForUpdates();
+    import('@tauri-apps/api/app')
+      .then(({ getVersion }) => getVersion())
+      .then((ver) => setAppVersion(ver))
+      .catch((err) => {
+        console.warn('Could not fetch app version from Tauri API:', err);
+      });
   }, []);
 
-  const handleUpdate = async () => {
-    if (isUpdating || !availableUpdate) return;
-    setIsUpdating(true);
+  // ============================================================
+  // REUSABLE UPDATER CHECK
+  // ============================================================
+  const checkForUpdates = async (isManual = false) => {
+    setUpdateStatus('checking');
+    setUpdateErrorMsg(null);
+    if (isManual) {
+      setBannerDismissed(false);
+    }
+
+    const endpoint =
+      'https://github.com/gyanram-dev/spyder/releases/latest/download/latest.json';
+    console.log('UPDATE CHECK STARTED');
+    console.log(`Current version: ${appVersion}`);
+    console.log(`Updater endpoint: ${endpoint}`);
+
     try {
-      await availableUpdate.downloadAndInstall();
+      const update = await check();
+
+      if (update) {
+        console.log(
+          `UPDATE CHECK RESULT: Update available! Version: ${update.version}`
+        );
+        setAvailableUpdate(update);
+        setUpdateStatus('update-available');
+      } else {
+        console.log('UPDATE CHECK RESULT: Application is up to date.');
+        setAvailableUpdate(null);
+        setUpdateStatus('up-to-date');
+      }
+    } catch (error: any) {
+      const errorDetails = error?.message || String(error);
+      console.error(`UPDATE CHECK ERROR: ${errorDetails}`, error);
+      setUpdateErrorMsg(errorDetails);
+      setUpdateStatus('error');
+    }
+  };
+
+  // Single startup update check for main window
+  useEffect(() => {
+    if (hasCheckedOnMountRef.current) return;
+    hasCheckedOnMountRef.current = true;
+    checkForUpdates(false);
+  }, []);
+
+  // ============================================================
+  // DOWNLOAD AND INSTALL UPDATE
+  // ============================================================
+  const handleInstallUpdate = async () => {
+    if (
+      !availableUpdate ||
+      updateStatus === 'downloading' ||
+      updateStatus === 'installing'
+    ) {
+      return;
+    }
+
+    setUpdateStatus('downloading');
+    setInstallProgressText('Downloading update...');
+
+    try {
+      let downloadedBytes = 0;
+      let totalBytes = 0;
+
+      await availableUpdate.downloadAndInstall((event: any) => {
+        if (!event) return;
+        switch (event.event) {
+          case 'Started':
+            totalBytes = event.data?.contentLength || 0;
+            setInstallProgressText('Downloading update...');
+            break;
+          case 'Progress':
+            downloadedBytes += event.data?.chunkLength || 0;
+            if (totalBytes > 0) {
+              const percent = Math.round((downloadedBytes / totalBytes) * 100);
+              setInstallProgressText(`Downloading update... (${percent}%)`);
+            } else {
+              setInstallProgressText('Downloading update...');
+            }
+            break;
+          case 'Finished':
+            setUpdateStatus('installing');
+            setInstallProgressText('Installing update...');
+            break;
+        }
+      });
+
+      setUpdateStatus('installing');
+      setInstallProgressText('Installing update & restarting...');
+
       await relaunch();
-    } catch (error) {
-      console.error('UPDATE INSTALL FAILED:', error);
-      setIsUpdating(false);
+    } catch (error: any) {
+      const errorDetails = error?.message || String(error);
+      console.error(`UPDATE INSTALLATION ERROR: ${errorDetails}`, error);
+      setUpdateErrorMsg(`Installation failed: ${errorDetails}`);
+      setUpdateStatus('error');
     }
   };
 
@@ -961,6 +1052,111 @@ export default function App() {
                       {isPaused ? 'Reminders Paused via Tray' : 'Reminders Active'}
                     </span>
                   </div>
+
+                  {/* ============================================================ */}
+                  {/* MANUAL UPDATE CENTER */}
+                  {/* ============================================================ */}
+                  <div className="p-4 rounded-2xl bg-[#0b061a] border border-purple-500/20 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xs font-bold text-white tracking-wide">
+                          Updates
+                        </h3>
+                        <p className="text-[11px] text-purple-200/60 font-medium">
+                          Current version: {appVersion}
+                        </p>
+                      </div>
+
+                      {updateStatus === 'checking' && (
+                        <span className="text-xs font-bold text-pink-400 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-pink-400 animate-ping" />
+                          Checking...
+                        </span>
+                      )}
+
+                      {updateStatus === 'up-to-date' && (
+                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 size={14} />
+                          You're up to date
+                        </span>
+                      )}
+
+                      {updateStatus === 'update-available' && availableUpdate && (
+                        <span className="text-xs font-bold text-pink-400">
+                          New version: {availableUpdate.version}
+                        </span>
+                      )}
+
+                      {updateStatus === 'error' && (
+                        <span className="text-xs font-bold text-rose-400">
+                          Unable to check for updates.
+                        </span>
+                      )}
+                    </div>
+
+                    {updateStatus === 'update-available' && availableUpdate && (
+                      <div className="pt-2 border-t border-purple-500/15 space-y-2">
+                        {availableUpdate.body && (
+                          <p className="text-xs text-purple-200/70 bg-purple-500/10 p-2.5 rounded-xl border border-purple-500/20 font-medium">
+                            {availableUpdate.body}
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleInstallUpdate}
+                          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-95 text-white text-xs font-extrabold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+                        >
+                          <span>Update Now</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {(updateStatus === 'downloading' ||
+                      updateStatus === 'installing') && (
+                      <div className="pt-2 border-t border-purple-500/15">
+                        <p className="text-xs text-pink-300 font-bold text-center">
+                          {installProgressText}
+                        </p>
+                      </div>
+                    )}
+
+                    {(updateStatus === 'idle' || updateStatus === 'up-to-date') && (
+                      <button
+                        type="button"
+                        onClick={() => checkForUpdates(true)}
+                        className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-purple-500/20 text-xs font-bold text-purple-200 hover:text-white transition-colors cursor-pointer"
+                      >
+                        Check for Updates
+                      </button>
+                    )}
+
+                    {updateStatus === 'checking' && (
+                      <button
+                        type="button"
+                        disabled
+                        className="w-full py-2 px-3 rounded-xl bg-white/5 border border-purple-500/10 text-xs font-bold text-purple-300/40 cursor-not-allowed"
+                      >
+                        Checking for updates...
+                      </button>
+                    )}
+
+                    {updateStatus === 'error' && (
+                      <div className="space-y-2 pt-1">
+                        {updateErrorMsg && (
+                          <p className="text-[11px] text-rose-300/80 bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
+                            {updateErrorMsg}
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => checkForUpdates(true)}
+                          className="w-full py-2 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-xs font-bold text-rose-200 transition-colors cursor-pointer"
+                        >
+                          Try Again
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -970,41 +1166,41 @@ export default function App() {
           {/* ============================================================ */}
           {/* UPDATE NOTIFICATION BANNER */}
           {/* ============================================================ */}
-          {availableUpdate !== null && (
-            <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-[#120a28]/95 border border-pink-500/40 rounded-2xl p-4 shadow-[0_10px_40px_rgba(0,0,0,0.8)] backdrop-blur-xl">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="p-2 rounded-xl bg-pink-500/20 text-pink-400 shrink-0 border border-pink-500/30">
-                  <Bell size={18} />
+          {updateStatus === 'update-available' &&
+            availableUpdate !== null &&
+            !bannerDismissed && (
+              <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-[#120a28]/95 border border-pink-500/40 rounded-2xl p-4 shadow-[0_10px_40px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 rounded-xl bg-pink-500/20 text-pink-400 shrink-0 border border-pink-500/30">
+                    <Bell size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white tracking-wide">
+                      Timebound Update Available
+                    </h4>
+                    <p className="text-xs text-purple-200/70 mt-0.5">
+                      Version {availableUpdate.version} is ready to install.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white tracking-wide">
-                    Timebound Update Available
-                  </h4>
-                  <p className="text-xs text-purple-200/70 mt-0.5">
-                    Version {availableUpdate.version} is ready to install.
-                  </p>
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-purple-500/15">
+                  <button
+                    type="button"
+                    onClick={() => setBannerDismissed(true)}
+                    className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-purple-200 hover:text-white border border-purple-500/20 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Later
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleInstallUpdate}
+                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white text-xs font-extrabold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    Update Now
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-purple-500/15">
-                <button
-                  type="button"
-                  disabled={isUpdating}
-                  onClick={() => setAvailableUpdate(null)}
-                  className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-purple-200 hover:text-white border border-purple-500/20 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  Later
-                </button>
-                <button
-                  type="button"
-                  disabled={isUpdating}
-                  onClick={handleUpdate}
-                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white text-xs font-extrabold shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
-                >
-                  {isUpdating ? 'Updating...' : 'Update Now'}
-                </button>
-              </div>
-            </div>
-          )}
+            )}
 
         </main>
       </div>
