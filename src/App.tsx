@@ -104,7 +104,7 @@ const getInitialReminders = (): Reminder[] => {
           ...r,
           repeat: r.repeat || 'every_day',
           until: r.until || undefined,
-          soundType: r.soundType || 'none',
+          soundType: r.soundType !== undefined ? r.soundType : 'default',
           soundId: r.soundId || undefined,
           soundName: r.soundName || undefined,
           character: getValidCharacter(r.character),
@@ -123,7 +123,7 @@ const getInitialReminders = (): Reminder[] => {
       minute: '30',
       amPm: 'AM',
       repeat: 'every_day',
-      soundType: 'none',
+      soundType: 'default',
       character: 'spiderman',
       active: true,
       lastTriggeredDate: null,
@@ -140,7 +140,7 @@ export default function App() {
   const [ampm, setAmpm] = useState<'AM' | 'PM'>('AM');
   const [repeat, setRepeat] = useState<RepeatOption>('never');
   const [untilDate, setUntilDate] = useState<string>(getTodayLocalDateStr());
-  const [soundType, setSoundType] = useState<SoundType>('none');
+  const [soundType, setSoundType] = useState<SoundType>('default');
   const [soundId, setSoundId] = useState<string | undefined>(undefined);
   const [soundName, setSoundName] = useState<string | undefined>(undefined);
   const [character, setCharacter] = useState<ReminderCharacter>('spiderman');
@@ -202,7 +202,7 @@ export default function App() {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
   const [availableUpdate, setAvailableUpdate] = useState<any>(null);
   const [updateErrorMsg, setUpdateErrorMsg] = useState<string | null>(null);
-  const [appVersion, setAppVersion] = useState<string>('0.1.6');
+  const [appVersion, setAppVersion] = useState<string>('0.1.7');
   const [installProgressText, setInstallProgressText] = useState<string>('');
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(false);
 

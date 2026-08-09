@@ -1,6 +1,4 @@
-// ============================================================
-// TIMEBOUND AUDIO STORE & PLAYBACK HELPER (IndexedDB + Web Audio API)
-// ============================================================
+import fahhAudioUrl from './assets/sounds/fahh.mp3';
 
 const DB_NAME = 'TimeboundAudioDB';
 const DB_VERSION = 1;
@@ -132,56 +130,32 @@ export const deleteAudioFile = async (soundId: string): Promise<void> => {
 };
 
 /**
- * Synthesize Timebound default chime using Web Audio API
+ * Play Timebound default sound (fahh.mp3)
  */
 export const playDefaultChimeSound = (): { stop: () => void } => {
-  let audioCtx: AudioContext | null = null;
-
+  let audio: HTMLAudioElement | null = null;
   try {
-    const AudioContextClass =
-      window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) return { stop: () => {} };
-
-    audioCtx = new AudioContextClass();
-    const now = audioCtx.currentTime;
-
-    // Chime notes: C5 (523.25Hz), E5 (659.25Hz), G5 (783.99Hz), C6 (1046.50Hz)
-    const notes = [523.25, 659.25, 783.99, 1046.5];
-    const delays = [0, 0.12, 0.24, 0.36];
-
-    notes.forEach((freq, index) => {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + delays[index]);
-
-      gain.gain.setValueAtTime(0, now + delays[index]);
-      gain.gain.linearRampToValueAtTime(0.25, now + delays[index] + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + delays[index] + 1.2);
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      osc.start(now + delays[index]);
-      osc.stop(now + delays[index] + 1.2);
+    audio = new Audio(fahhAudioUrl);
+    audio.play().catch((err) => {
+      console.warn('Default audio playback error:', err);
     });
-  } catch (e) {
-    console.warn('Default chime audio playback error:', e);
-  }
 
-  return {
-    stop: () => {
-      try {
-        if (audioCtx && audioCtx.state !== 'closed') {
-          audioCtx.close();
+    return {
+      stop: () => {
+        try {
+          if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+          }
+        } catch (e) {
+          console.warn('Error stopping default audio:', e);
         }
-      } catch (e) {
-        console.warn('Error closing audio context:', e);
-      }
-    },
-  };
+      },
+    };
+  } catch (e) {
+    console.warn('Default audio initialization error:', e);
+    return { stop: () => {} };
+  }
 };
 
 /**
