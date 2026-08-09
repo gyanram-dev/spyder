@@ -1,10 +1,10 @@
 {
     "version":  "0.1.4",
-    "notes":  "Timebound v0.1.4 — new reminder characters, character animation fixes, and updater endpoint synchronization.",
+    "notes":  "Timebound v0.1.4 — character asset optimizations, performance improvements, and updater synchronization.",
     "pub_date":  "2026-08-09T00:00:00Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRcDgvekFoT1RDVElhMmthRDR4R2k5UWVETm8ycE0rTzEwTzF6MndKZm43d2x5Q1k2Yld0bmZ1V0srdDVkSytscTZnODJkL0pyVUtuNlh3TWFIdjlBZ0E9PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MTk5MDk5CWZpbGU6VGltZUJvdW5kXzAuMS40X3g2NC1zZXR1cC5leGUKTVN6MlhFbzFnTkcxNStxQkVYTWZ3TEVtdEw2YUN2U2Fva3hTazE1Wmp5a3c0RkJxY3pvYlBkbjl3dGVhcmptTmswUkc0aFFwZStDVkJyd1pUQU5HQ2c9PQo=",
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRcDgvekFoT1RDVElhMmthRDR4R2k5UWVETm8ycE0rTzEwTzF6MndKZm43d2x5Q1k2Yld0bmZ1V0srdDVkSytscTZnODJkL0pyVUtuNlh3TWFIdjlBZ0E9PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MTk5OTYxCWZpbGU6VGltZUJvdW5kXzAuMS40X3g2NC1zZXR1cC5leGUKUURQWnhld0pmNmVldjAybW5xRFFicDdrNm5hYVl0WnlzclUyaDFyV2ZxbFliNUpJNWdHQWlybmJ2bmIxcHdtYjAwdit6TUtxT0gvbzZlRGZmdmlnQWc9PQo=",
                                              "url":  "https://github.com/gyanram-dev/spyder/releases/download/v0.1.4/TimeBound_0.1.4_x64-setup.exe"
                                          }
                   }
