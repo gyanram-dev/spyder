@@ -222,7 +222,7 @@ export default function ReminderWindow() {
                 handleSpiderArrived();
               }
             }}
-            className="w-[240px] max-h-[360px] object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.8)] pointer-events-none block"
+            className="w-[280px] max-h-[420px] object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.8)] pointer-events-none block"
           />
 
           {/* Reminder Card (Positioned absolutely to the LEFT of character anchor) */}
@@ -233,7 +233,7 @@ export default function ReminderWindow() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, transition: { duration: 0.15 } }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="absolute right-full mr-3 top-[140px] w-[250px] bg-white text-slate-900 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-100 z-30"
+                className="absolute right-full mr-3 top-[155px] w-[250px] bg-white text-slate-900 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-100 z-30"
               >
                 <div className="text-[10px] font-extrabold uppercase tracking-widest text-red-500 mb-1.5">
                   REMINDER

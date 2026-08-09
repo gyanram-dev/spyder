@@ -1,10 +1,10 @@
 {
     "version":  "0.1.5",
-    "notes":  "TimeBound v0.1.5 — single-instance process management, performance improvements, and updater reliability.",
-    "pub_date":  "2026-08-09T12:43:00Z",
+    "notes":  "TimeBound v0.1.5 — single-instance process management, character visual size refinement, and updater reliability.",
+    "pub_date":  "2026-08-09T12:58:00Z",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRcDgvekFoT1RDVElhMmthRDR4R2k5UWVETm8ycE0rTzEwTzF6MndKZm43d2x5Q1k2Yld0bmZ1V0srdDVkSytscTZnODJkL0pyVUtuNlh3TWFIdjlBZ0E9PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MjA4NTU4CWZpbGU6VGltZUJvdW5kXzAuMS41X3g2NC1zZXR1cC5leGUKVUxRSlkyVG50c2lxd0tqYzh1enZhcXF6YVh0LzV6UjFFeHdrNmVjM1pDRTFXVTRzYjh1dm01MFlVOHlyUGtWNDZ4d2N2REl0R2J3dk52Uk16K2h1QWc9PQo=",
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRcDgvekFoT1RDVElhMmthRDR4R2k5UWVETm8ycE0rTzEwTzF6MndKZm43d2x5Q1k2Yld0bmZ1V0srdDVkSytscTZnODJkL0pyVUtuNlh3TWFIdjlBZ0E9PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MjA5NDk2CWZpbGU6VGltZUJvdW5kXzAuMS41X3g2NC1zZXR1cC5leGUKTVhkbmMzcHljWnNtbmltdnZpdXllcmtzV2tHMWlyYnUyaDV6MzlWd0M3Rld4c0M4NDZydlR3dmFnNExidmhkbWV6R20yckxNQXgremlyS084Ynd3QWc9PQo=",
                                              "url":  "https://github.com/gyanram-dev/spyder/releases/download/v0.1.5/TimeBound_0.1.5_x64-setup.exe"
                                          }
                   }

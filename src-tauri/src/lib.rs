@@ -23,7 +23,7 @@ fn show_reminder(app: tauri::AppHandle, message: String, character: Option<Strin
             let monitor_position = monitor.position();
             let scale_factor = monitor.scale_factor();
 
-            let window_width_phys = (520.0 * scale_factor) as i32;
+            let window_width_phys = (580.0 * scale_factor) as i32;
             let padding_phys = (20.0 * scale_factor) as i32;
 
             let x =
