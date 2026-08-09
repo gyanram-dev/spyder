@@ -240,7 +240,7 @@ export default function App() {
     }
 
     const endpoint =
-      'https://github.com/gyanram-dev/spyder/releases/latest/download/latest.json';
+      'https://raw.githubusercontent.com/gyanram-dev/spyder/main/latest.json';
     console.log('UPDATE CHECK STARTED');
     console.log(`Current version: ${appVersion}`);
     console.log(`Updater endpoint: ${endpoint}`);
