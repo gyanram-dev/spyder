@@ -46,6 +46,14 @@ export const getValidCharacter = (char: any): ReminderCharacter => {
   return 'spiderman';
 };
 
+// Preload character image assets into browser memory to eliminate high-res image decode lag
+if (typeof window !== 'undefined') {
+  Object.values(characterAssets).forEach((src) => {
+    const img = new Image();
+    img.src = src;
+  });
+}
+
 export interface ReminderQueueItem {
   message: string;
   character: ReminderCharacter;
@@ -59,6 +67,11 @@ export default function ReminderWindow() {
   const [currentMessage, setCurrentMessage] = useState<string>('');
   const [currentCharacter, setCurrentCharacter] = useState<ReminderCharacter>('spiderman');
   const exitTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check reduced motion preference
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Listen for trigger-reminder event from Tauri backend
   useEffect(() => {
@@ -121,7 +134,7 @@ export default function ReminderWindow() {
     }
   }, [currentState, queue]);
 
-  // 1. Spider-Man arrives at final position -> Wait 150ms -> Show card
+  // 1. Character arrives at final position -> Wait 150ms -> Show card
   const handleSpiderArrived = () => {
     if (currentState === 'SpiderEntering') {
       setTimeout(() => {
@@ -163,7 +176,7 @@ export default function ReminderWindow() {
     setCurrentMessage('');
   };
 
-  // 2. Dismiss sequence: Fade out card -> Slide Spider-Man up -> Hide window after animation
+  // 2. Dismiss sequence: Fade out card -> Slide character up -> Hide window after animation
   const handleDismiss = () => {
     console.log(`[Dismiss clicked] time=${Date.now()}ms currentState=${currentState}`);
     import('@tauri-apps/api/event')
@@ -188,7 +201,7 @@ export default function ReminderWindow() {
 
   return (
     <div className="w-full h-screen bg-transparent flex items-start justify-end pr-4 pt-0 select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Notification Container (Spider-Man is the anchor element) */}
+      {/* Notification Container */}
       {showSpider && (
         <div className="relative inline-block">
           {/* Character PNG (Primary Animation: straight vertical translateY only, 700ms easeOut) */}
@@ -212,7 +225,7 @@ export default function ReminderWindow() {
             className="w-[240px] max-h-[360px] object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.8)] pointer-events-none block"
           />
 
-          {/* Reminder Card (Positioned absolutely to the LEFT of Spider-Man anchor) */}
+          {/* Reminder Card (Positioned absolutely to the LEFT of character anchor) */}
           <AnimatePresence>
             {showCard && (
               <motion.div

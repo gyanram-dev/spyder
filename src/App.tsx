@@ -202,7 +202,7 @@ export default function App() {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
   const [availableUpdate, setAvailableUpdate] = useState<any>(null);
   const [updateErrorMsg, setUpdateErrorMsg] = useState<string | null>(null);
-  const [appVersion, setAppVersion] = useState<string>('0.1.2');
+  const [appVersion, setAppVersion] = useState<string>('0.1.3');
   const [installProgressText, setInstallProgressText] = useState<string>('');
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(false);
 
