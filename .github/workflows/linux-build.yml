@@ -57,21 +57,26 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Import Signing Key
-        run: |
-          mkdir -p ~/.tauri
-          if [ -n "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_B64 }}" ]; then
-            echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_B64 }}" | base64 -d > ~/.tauri/timebound-v2.key
-          elif [ -n "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" ]; then
-            echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" | base64 -d > ~/.tauri/timebound-v2.key 2>/dev/null || echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" > ~/.tauri/timebound-v2.key
-          fi
-
       - name: Build Linux AppImage and Debian package
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
-          TAURI_SIGNING_PRIVATE_KEY: /home/runner/.tauri/timebound-v2.key
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
-        run: npm run tauri build -- --bundles appimage,deb
+        run: |
+          KEY_RAW=""
+          if [ -n "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_B64 }}" ]; then
+            KEY_RAW="${{ secrets.TAURI_SIGNING_PRIVATE_KEY_B64 }}"
+          elif [ -n "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" ]; then
+            KEY_RAW="${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}"
+          fi
+
+          KEY_CLEAN=$(echo "$KEY_RAW" | tr -d '\r\n ')
+
+          if [ -n "$KEY_CLEAN" ]; then
+            export TAURI_SIGNING_PRIVATE_KEY="$KEY_CLEAN"
+          fi
+
+          npm run tauri build -- --bundles appimage,deb
+
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
