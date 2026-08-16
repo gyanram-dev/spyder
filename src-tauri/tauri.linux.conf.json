@@ -2,6 +2,6 @@
   "$schema": "https://schema.tauri.app/config/2",
   "bundle": {
     "targets": ["appimage", "deb"],
-    "createUpdaterArtifacts": false
+    "createUpdaterArtifacts": true
   }
 }
