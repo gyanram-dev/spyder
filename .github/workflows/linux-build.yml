@@ -60,22 +60,26 @@ jobs:
       - name: Build Linux AppImage and Debian package
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
+          RAW_KEY_B64: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_B64 }}
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         run: |
-          KEY_RAW=""
-          if [ -n "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_B64 }}" ]; then
-            KEY_RAW="${{ secrets.TAURI_SIGNING_PRIVATE_KEY_B64 }}"
-          elif [ -n "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" ]; then
-            KEY_RAW="${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}"
+          SECRET_VAL="${RAW_KEY_B64:-$RAW_KEY}"
+
+          if [ -z "$SECRET_VAL" ]; then
+            echo "ERROR: No signing key secret found in TAURI_SIGNING_PRIVATE_KEY_B64 or TAURI_SIGNING_PRIVATE_KEY"
+            exit 1
           fi
 
-          KEY_CLEAN=$(echo "$KEY_RAW" | tr -d '\r\n ')
-
-          if [ -n "$KEY_CLEAN" ]; then
-            export TAURI_SIGNING_PRIVATE_KEY="$KEY_CLEAN"
+          if echo "$SECRET_VAL" | grep -q "^untrusted comment:"; then
+            FINAL_KEY=$(echo "$SECRET_VAL" | base64 -w 0)
+          else
+            FINAL_KEY=$(echo "$SECRET_VAL" | tr -d '\r\n ')
           fi
 
+          export TAURI_SIGNING_PRIVATE_KEY="$FINAL_KEY"
           npm run tauri build -- --bundles appimage,deb
+
 
 
       - name: Upload Linux Artifacts
