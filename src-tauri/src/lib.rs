@@ -25,42 +25,43 @@ fn show_reminder(app: tauri::AppHandle, message: String, character: Option<Strin
                 let monitor_position = monitor.position();
                 let scale_factor = monitor.scale_factor();
 
-                let window_width_phys = (580.0 * scale_factor) as i32;
+                let window_width_phys = (540.0 * scale_factor) as i32;
                 let padding_phys = (20.0 * scale_factor) as i32;
 
                 let x = monitor_position.x + monitor_size.width as i32 - window_width_phys - padding_phys;
                 let y = monitor_position.y + padding_phys;
 
                 println!(
-                    "[RUST DIAGNOSTIC] Monitor found | size={}x{} | pos=({},{}) | scale={} | calc_x={} calc_y={}",
+                    "[WINDOW] monitor found | size={}x{} | pos=({},{}) | scale={} | calc_x={} calc_y={}",
                     monitor_size.width, monitor_size.height, monitor_position.x, monitor_position.y, scale_factor, x, y
                 );
 
                 let pos_res = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(x, y)));
-                println!("[RUST DIAGNOSTIC] set_position result: {:?}", pos_res);
+                println!("[WINDOW] position set to ({}, {}) | res: {:?}", x, y, pos_res);
             }
             Ok(None) => {
-                println!("[RUST DIAGNOSTIC WARNING] current_monitor returned None!");
+                println!("[WINDOW WARNING] current_monitor returned None!");
             }
             Err(e) => {
-                println!("[RUST DIAGNOSTIC ERROR] Failed to query current_monitor: {:?}", e);
+                println!("[WINDOW ERROR] Failed to query current_monitor: {:?}", e);
             }
         }
 
+        println!("[WINDOW] size 540x440");
         let aot_res = window.set_always_on_top(true);
-        println!("[RUST DIAGNOSTIC] set_always_on_top(true) result: {:?}", aot_res);
+        println!("[WINDOW] always_on_top: {:?}", aot_res);
 
         let skip_res = window.set_skip_taskbar(true);
-        println!("[RUST DIAGNOSTIC] set_skip_taskbar(true) result: {:?}", skip_res);
+        println!("[WINDOW] skip_taskbar: {:?}", skip_res);
 
         let show_res = window.show();
-        println!("[RUST DIAGNOSTIC] window.show() result: {:?}", show_res);
+        println!("[WINDOW] show: {:?}", show_res);
 
         let unm_res = window.unminimize();
-        println!("[RUST DIAGNOSTIC] window.unminimize() result: {:?}", unm_res);
+        println!("[WINDOW] unminimize: {:?}", unm_res);
 
         let focus_res = window.set_focus();
-        println!("[RUST DIAGNOSTIC] window.set_focus() result: {:?}", focus_res);
+        println!("[WINDOW] focus: {:?}", focus_res);
 
         let emit_res = window.emit(
             "trigger-reminder",

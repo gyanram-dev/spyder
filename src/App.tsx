@@ -27,6 +27,7 @@ import timeboundLogo from './assets/logo.png';
 import {
   playDefaultChimeSound,
   playCustomAudioBlob,
+  playReminderSound,
   getAudioFile,
   saveAudioFile,
   validateAudioFile,
@@ -408,30 +409,6 @@ export default function App() {
     setIsPreviewing(false);
   };
 
-  const playReminderSound = async (type?: SoundType, id?: string) => {
-    stopActiveReminderAudio();
-
-    if (!type || type === 'none') {
-      return;
-    }
-
-    if (type === 'default') {
-      activeAudioControllerRef.current = playDefaultChimeSound();
-      return;
-    }
-
-    if (type === 'custom' && id) {
-      try {
-        const blob = await getAudioFile(id);
-        if (blob) {
-          activeAudioControllerRef.current = playCustomAudioBlob(blob);
-        }
-      } catch (e) {
-        console.warn('Failed to play custom audio for reminder:', e);
-      }
-    }
-  };
-
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     import('@tauri-apps/api/event')
@@ -459,34 +436,13 @@ export default function App() {
 
     if (soundType === 'none') return;
 
-    if (soundType === 'default') {
-      setIsPreviewing(true);
-      const controller = playDefaultChimeSound();
-      previewAudioControllerRef.current = controller;
-      setTimeout(() => {
-        setIsPreviewing(false);
-        previewAudioControllerRef.current = null;
-      }, 1500);
-      return;
-    }
-
-    if (soundType === 'custom' && soundId) {
-      try {
-        const blob = await getAudioFile(soundId);
-        if (!blob) {
-          setShowError(true);
-          setSuccessMessage('Could not load custom audio file');
-          setTimeout(() => setShowError(false), 3000);
-          return;
-        }
-        setIsPreviewing(true);
-        const controller = playCustomAudioBlob(blob);
-        previewAudioControllerRef.current = controller;
-      } catch (e) {
-        console.warn('Failed to preview custom audio:', e);
-        setIsPreviewing(false);
-      }
-    }
+    setIsPreviewing(true);
+    const controller = playReminderSound(soundType, soundId);
+    previewAudioControllerRef.current = controller;
+    setTimeout(() => {
+      setIsPreviewing(false);
+      previewAudioControllerRef.current = null;
+    }, 1500);
   };
 
   const handleChooseAudioFile = async (
@@ -704,7 +660,7 @@ export default function App() {
       `[show_reminder() called] time=${Date.now()}ms message="${formattedMsg}" sound=${sType} character=${selectedChar}`
     );
 
-    playReminderSound(sType, sId);
+    activeAudioControllerRef.current = playReminderSound(sType, sId);
 
     try {
       const { invoke } = await import('@tauri-apps/api/core');

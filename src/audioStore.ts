@@ -1,3 +1,4 @@
+import fahhWavUrl from './assets/sounds/fahh.wav';
 import fahhAudioUrl from './assets/sounds/fahh.mp3';
 
 const DB_NAME = 'TimeboundAudioDB';
@@ -132,6 +133,8 @@ export const deleteAudioFile = async (soundId: string): Promise<void> => {
 /**
  * Play Timebound default sound (fahh.mp3)
  */
+export type SoundType = 'none' | 'default' | 'custom';
+
 // Pre-unlock browser/WebKitGTK audio context on first user interaction
 if (typeof window !== 'undefined') {
   const unlockAudioContext = () => {
@@ -210,22 +213,30 @@ export const playSynthesizedChime = (): { stop: () => void } => {
 };
 
 /**
- * Play Timebound default sound (fahh.mp3) with Web Audio fallback
+ * Play Timebound default WAV sound asset
  */
 export const playDefaultChimeSound = (): { stop: () => void } => {
   let audio: HTMLAudioElement | null = null;
   let synthStop: (() => void) | null = null;
 
   try {
-    console.log('[AUDIO] Playing default chime sound asset:', fahhAudioUrl);
-    audio = new Audio(fahhAudioUrl);
+    console.log('[AUDIO] attempting reminder sound');
+    console.log('[AUDIO] sound URL/path:', fahhWavUrl);
+    audio = new Audio(fahhWavUrl);
 
-    audio.play().catch((err) => {
-      console.warn('[AUDIO ERROR] Default audio element playback rejected/failed:', err);
-      console.log('[AUDIO FALLBACK] Triggering Web Audio API synthesizer chime fallback.');
-      const synth = playSynthesizedChime();
-      synthStop = synth.stop;
-    });
+    const playPromise = audio.play();
+    if (playPromise) {
+      playPromise
+        .then(() => {
+          console.log('[AUDIO] playback started');
+        })
+        .catch((err) => {
+          console.warn('[AUDIO ERROR] Default WAV audio playback rejected/failed:', err);
+          console.log('[AUDIO FALLBACK] Triggering Web Audio API synthesizer chime fallback.');
+          const synth = playSynthesizedChime();
+          synthStop = synth.stop;
+        });
+    }
 
     return {
       stop: () => {
@@ -243,10 +254,52 @@ export const playDefaultChimeSound = (): { stop: () => void } => {
       },
     };
   } catch (e) {
-    console.warn('[AUDIO ERROR] Default audio initialization error:', e);
+    console.warn('[AUDIO ERROR] Default WAV audio initialization error:', e);
     console.log('[AUDIO FALLBACK] Triggering Web Audio API synthesizer chime fallback.');
     return playSynthesizedChime();
   }
+};
+
+/**
+ * Canonical sound playback function for Preview, Test Reminder, and Scheduled Reminders
+ */
+export const playReminderSound = (
+  soundType: SoundType = 'default',
+  customSoundId?: string
+): { stop: () => void } => {
+  console.log(`[REMINDER] trigger received | soundType=${soundType}`);
+
+  if (soundType === 'none') {
+    console.log('[AUDIO] Sound set to none. Skipping playback.');
+    return { stop: () => {} };
+  }
+
+  if (soundType === 'custom' && customSoundId) {
+    console.log(`[AUDIO] Attempting custom sound playback | soundId=${customSoundId}`);
+    let customController: { stop: () => void } | null = null;
+    getAudioFile(customSoundId)
+      .then((blob) => {
+        if (blob) {
+          const res = playCustomAudioBlob(blob);
+          customController = { stop: res.stop };
+        } else {
+          console.warn('[AUDIO ERROR] Custom sound file not found. Falling back to default WAV sound.');
+          customController = playDefaultChimeSound();
+        }
+      })
+      .catch((err) => {
+        console.warn('[AUDIO ERROR] Failed to load custom sound:', err);
+        customController = playDefaultChimeSound();
+      });
+
+    return {
+      stop: () => {
+        if (customController) customController.stop();
+      },
+    };
+  }
+
+  return playDefaultChimeSound();
 };
 
 /**

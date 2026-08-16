@@ -218,19 +218,19 @@ export default function ReminderWindow() {
   const activeCharacterAsset = characterAssets[validCharacterKey] || characterAssets.spiderman;
 
   return (
-    <div className="w-full h-screen bg-transparent flex items-start justify-end pr-4 pt-0 select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="w-full h-screen bg-transparent flex items-start justify-end pr-2 pt-0 select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Notification Container */}
       {showSpider && (
         <div className="relative inline-block">
-          {/* Character PNG (Primary Animation: straight vertical translateY only, 700ms easeOut) */}
+          {/* Character PNG */}
           <motion.img
             key={currentMessage + validCharacterKey}
             src={activeCharacterAsset}
             alt={validCharacterKey}
-            initial={{ y: -650 }}
-            animate={{ y: isLeaving ? -650 : 0 }}
+            initial={{ y: -440 }}
+            animate={{ y: isLeaving ? -440 : 0 }}
             transition={{
-              duration: isLeaving ? 0.6 : 0.7,
+              duration: isLeaving ? 0.5 : 0.6,
               ease: isLeaving ? 'easeIn' : 'easeOut',
             }}
             onAnimationComplete={() => {
@@ -240,7 +240,7 @@ export default function ReminderWindow() {
                 handleSpiderArrived();
               }
             }}
-            className="w-[280px] max-h-[420px] object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.8)] pointer-events-none block"
+            className="w-[200px] max-h-[300px] object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.8)] pointer-events-none block"
           />
 
           {/* Reminder Card (Positioned absolutely to the LEFT of character anchor) */}
@@ -251,19 +251,19 @@ export default function ReminderWindow() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, transition: { duration: 0.15 } }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="absolute right-full mr-3 top-[155px] w-[250px] bg-white text-slate-900 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-100 z-30"
+                className="absolute right-full mr-3 top-[90px] w-[240px] bg-[#0c061e] text-white rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.85)] border border-purple-500/30 z-30"
               >
-                <div className="text-[10px] font-extrabold uppercase tracking-widest text-red-500 mb-1.5">
+                <div className="text-[10px] font-extrabold uppercase tracking-widest text-pink-400 mb-1.5">
                   REMINDER
                 </div>
-                <p className="text-slate-900 font-bold text-sm leading-snug break-words mb-3">
+                <p className="text-white font-bold text-xs leading-snug break-words mb-3">
                   {currentMessage}
                 </p>
                 <div className="flex justify-end pt-1">
                   <button
                     type="button"
                     onClick={handleDismiss}
-                    className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-sm transition-colors cursor-pointer"
+                    className="px-3 py-1 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
                   >
                     Dismiss
                   </button>
