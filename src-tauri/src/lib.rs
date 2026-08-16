@@ -68,6 +68,42 @@ fn show_reminder(app: tauri::AppHandle, message: String, character: Option<Strin
             serde_json::json!({ "message": message, "character": char_str }),
         );
         println!("[RUST DIAGNOSTIC] window.emit('trigger-reminder') result: {:?}", emit_res);
+
+        #[cfg(target_os = "linux")]
+        {
+            let app_handle = app.clone();
+            std::thread::spawn(move || {
+                let resource_path = app_handle
+                    .path()
+                    .resource_dir()
+                    .map(|p| p.join("resources").join("fahh.wav"))
+                    .unwrap_or_else(|_| std::path::PathBuf::from("/usr/share/sounds/freedesktop/stereo/bell.oga"));
+
+                let wav_str = resource_path.to_string_lossy().to_string();
+                println!("[AUDIO RUST NATIVE] Target WAV sound path: '{}'", wav_str);
+
+                let sound_commands = [
+                    ("paplay", vec![wav_str.as_str()]),
+                    ("pw-play", vec![wav_str.as_str()]),
+                    ("aplay", vec![wav_str.as_str()]),
+                    ("canberra-gtk-play", vec!["-f", wav_str.as_str()]),
+                    ("paplay", vec!["/usr/share/sounds/freedesktop/stereo/bell.oga"]),
+                ];
+
+                let mut played = false;
+                for (cmd, args) in sound_commands.iter() {
+                    if let Ok(mut child) = std::process::Command::new(cmd).args(args).spawn() {
+                        println!("[AUDIO RUST NATIVE] Triggered native Linux player '{}'", cmd);
+                        let _ = child.wait();
+                        played = true;
+                        break;
+                    }
+                }
+                if !played {
+                    println!("[AUDIO RUST NATIVE WARNING] No native Linux audio utility found!");
+                }
+            });
+        }
     } else {
         println!("[RUST DIAGNOSTIC ERROR] 'reminder' webview window NOT FOUND!");
     }
@@ -97,6 +133,82 @@ fn hide_reminder(app: tauri::AppHandle) {
     }
 }
 
+#[tauri::command]
+fn play_native_sound(app: tauri::AppHandle) {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    println!("[AUDIO] play_native_sound invoked | time={}ms", now);
+
+    let app_handle = app.clone();
+    std::thread::spawn(move || {
+        // Resolve resource directory candidates on Linux
+        let mut candidate_paths: Vec<std::path::PathBuf> = Vec::new();
+
+        if let Ok(res_dir) = app_handle.path().resource_dir() {
+            candidate_paths.push(res_dir.join("resources").join("fahh.wav"));
+            candidate_paths.push(res_dir.join("fahh.wav"));
+        }
+        candidate_paths.push(std::path::PathBuf::from("/usr/lib/timebound/resources/fahh.wav"));
+        candidate_paths.push(std::path::PathBuf::from("/usr/lib/timebound/fahh.wav"));
+        candidate_paths.push(std::path::PathBuf::from("/usr/share/sounds/freedesktop/stereo/bell.oga"));
+
+        let mut resolved_wav_path = std::path::PathBuf::from("/usr/share/sounds/freedesktop/stereo/bell.oga");
+        for candidate in &candidate_paths {
+            if candidate.exists() {
+                resolved_wav_path = candidate.clone();
+                println!("[AUDIO] FOUND sound file at resolved path: {:?}", resolved_wav_path);
+                break;
+            }
+        }
+
+        let wav_str = resolved_wav_path.to_string_lossy().to_string();
+        println!("[AUDIO] final resolved audio path = {}", wav_str);
+
+        #[cfg(target_os = "linux")]
+        {
+            let players = [
+                ("pw-play", vec![wav_str.as_str()]),
+                ("paplay", vec![wav_str.as_str()]),
+                ("aplay", vec![wav_str.as_str()]),
+                ("canberra-gtk-play", vec!["-f", wav_str.as_str()]),
+            ];
+
+            let mut played = false;
+            for (player, args) in players.iter() {
+                println!("[AUDIO] checking player = {}", player);
+                println!("[AUDIO] command = {} {:?}", player, args);
+                match std::process::Command::new(player).args(args).output() {
+                    Ok(output) => {
+                        println!("[AUDIO] exit status = {:?}", output.status);
+                        if !output.status.success() {
+                            let stderr = String::from_utf8_lossy(&output.stderr);
+                            println!("[AUDIO ERROR] Player '{}' exited with status {:?}, stderr: {}", player, output.status, stderr);
+                        } else {
+                            println!("[AUDIO] Player '{}' completed successfully!", player);
+                            played = true;
+                            break;
+                        }
+                    }
+                    Err(err) => {
+                        println!("[AUDIO ERROR] Failed to execute player '{}': {:?}", player, err);
+                    }
+                }
+            }
+
+            if !played {
+                println!("[AUDIO ERROR] All Linux native audio players (pw-play, paplay, aplay) failed!");
+            }
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        {
+            println!("[AUDIO] Non-Linux platform, native audio handled by frontend HTML5 Audio.");
+        }
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -117,7 +229,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             show_reminder,
             reveal_reminder,
-            hide_reminder
+            hide_reminder,
+            play_native_sound
         ])
         .setup(|app| {
             // Check if application was launched on Windows startup

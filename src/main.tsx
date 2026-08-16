@@ -6,16 +6,11 @@ import './index.css';
 
 const isReminderWindow = window.location.search.includes('window=reminder') || window.location.hash.includes('reminder');
 
-if (isReminderWindow) {
-  document.documentElement.style.backgroundColor = 'transparent';
-  document.body.style.backgroundColor = 'transparent';
-  const rootEl = document.getElementById('root');
-  if (rootEl) {
-    rootEl.style.backgroundColor = 'transparent';
-  }
-} else {
-  document.documentElement.style.backgroundColor = '#0b071e';
-  document.body.style.backgroundColor = '#0b071e';
+document.documentElement.style.backgroundColor = '#0b071e';
+document.body.style.backgroundColor = '#0b071e';
+const rootEl = document.getElementById('root');
+if (rootEl) {
+  rootEl.style.backgroundColor = '#0b071e';
 }
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(

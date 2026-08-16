@@ -274,6 +274,26 @@ export const playReminderSound = (
     return { stop: () => {} };
   }
 
+  const isLinux =
+    typeof navigator !== 'undefined' &&
+    /linux/i.test(navigator.userAgent || navigator.platform);
+
+  if (isLinux && soundType === 'default') {
+    console.log('[AUDIO] Linux platform detected. Triggering Rust native audio command play_native_sound.');
+    import('@tauri-apps/api/core')
+      .then(({ invoke }) => {
+        invoke('play_native_sound').catch((err) => {
+          console.warn('[AUDIO ERROR] Tauri play_native_sound invoke failed:', err);
+          playDefaultChimeSound();
+        });
+      })
+      .catch(() => {
+        playDefaultChimeSound();
+      });
+
+    return { stop: () => {} };
+  }
+
   if (soundType === 'custom' && customSoundId) {
     console.log(`[AUDIO] Attempting custom sound playback | soundId=${customSoundId}`);
     let customController: { stop: () => void } | null = null;
