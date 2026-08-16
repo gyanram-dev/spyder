@@ -6,6 +6,10 @@
                       "windows-x86_64":  {
                                              "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSUEM4blYyMHV0SllaNmxQRitabXU1bk1Id2ZhUW90UHhlRDJJNUg3aXI1UTcvNU4rTC9vaWhidHNpbEsxZzRNUS94bS8yV1MxZmEwa3hPemRPRTdGNHNoa3k2WWpXcmdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2MzAwOTY5CWZpbGU6VGltZUJvdW5kXzAuMS43X3g2NC1zZXR1cC5leGUKZTB6SlhUZ0JGcTYxNHhVaEdmNDlGaHRPWUtNRXFtNGY1U0pzcXEwMGNnQjg5Q29LdWZJMWcxeW9tSGg5MDl6N0ZGVS83Mk1qOWphYk9GZkVUYk5wRHc9PQo=",
                                              "url":  "https://github.com/gyanram-dev/spyder/releases/download/v0.1.7/TimeBound_0.1.7_x64-setup.exe"
+                                         },
+                      "linux-x86_64": {
+                                             "signature": "",
+                                             "url": "https://github.com/gyanram-dev/spyder/releases/download/v0.1.7/TimeBound_0.1.7_amd64.AppImage.tar.gz"
                                          }
                   }
 }

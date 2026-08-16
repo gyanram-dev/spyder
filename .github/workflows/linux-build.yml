@@ -57,10 +57,19 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Import Signing Key
+        run: |
+          mkdir -p ~/.tauri
+          if [ -n "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_B64 }}" ]; then
+            echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_B64 }}" | base64 -d > ~/.tauri/timebound-v2.key
+          elif [ -n "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" ]; then
+            echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" | base64 -d > ~/.tauri/timebound-v2.key 2>/dev/null || echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" > ~/.tauri/timebound-v2.key
+          fi
+
       - name: Build Linux AppImage and Debian package
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: /home/runner/.tauri/timebound-v2.key
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         run: npm run tauri build -- --bundles appimage,deb
 
@@ -70,5 +79,7 @@ jobs:
           name: timebound-linux-packages
           path: |
             src-tauri/target/release/bundle/appimage/*.AppImage
-            src-tauri/target/release/bundle/appimage/*.AppImage.sig
+            src-tauri/target/release/bundle/appimage/*.tar.gz
+            src-tauri/target/release/bundle/appimage/*.tar.gz.sig
             src-tauri/target/release/bundle/deb/*.deb
+
