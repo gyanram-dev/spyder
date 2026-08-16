@@ -132,12 +132,37 @@ export const deleteAudioFile = async (soundId: string): Promise<void> => {
 /**
  * Play Timebound default sound (fahh.mp3)
  */
+// Pre-unlock browser/WebKitGTK audio context on first user interaction
+if (typeof window !== 'undefined') {
+  const unlockAudioContext = () => {
+    try {
+      const a = new Audio(fahhAudioUrl);
+      a.volume = 0.001;
+      const p = a.play();
+      if (p) {
+        p.then(() => {
+          a.pause();
+          a.currentTime = 0;
+        }).catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
+  };
+  window.addEventListener('click', unlockAudioContext, { once: true });
+  window.addEventListener('keydown', unlockAudioContext, { once: true });
+}
+
+/**
+ * Play Timebound default sound (fahh.mp3)
+ */
 export const playDefaultChimeSound = (): { stop: () => void } => {
   let audio: HTMLAudioElement | null = null;
   try {
+    console.log('[AUDIO] Playing default chime sound asset:', fahhAudioUrl);
     audio = new Audio(fahhAudioUrl);
     audio.play().catch((err) => {
-      console.warn('Default audio playback error:', err);
+      console.warn('[AUDIO ERROR] Default audio playback rejected:', err);
     });
 
     return {
@@ -148,12 +173,12 @@ export const playDefaultChimeSound = (): { stop: () => void } => {
             audio.currentTime = 0;
           }
         } catch (e) {
-          console.warn('Error stopping default audio:', e);
+          console.warn('[AUDIO ERROR] Error stopping default audio:', e);
         }
       },
     };
   } catch (e) {
-    console.warn('Default audio initialization error:', e);
+    console.warn('[AUDIO ERROR] Default audio initialization error:', e);
     return { stop: () => {} };
   }
 };
@@ -169,10 +194,11 @@ export const playCustomAudioBlob = (
 
   try {
     objectUrl = URL.createObjectURL(blob);
+    console.log('[AUDIO] Playing custom audio blob URL:', objectUrl);
     audio = new Audio(objectUrl);
 
     const playPromise = audio.play().catch((err) => {
-      console.warn('Custom audio playback failed:', err);
+      console.warn('[AUDIO ERROR] Custom audio playback failed:', err);
     });
 
     return {
@@ -190,7 +216,7 @@ export const playCustomAudioBlob = (
       },
     };
   } catch (e) {
-    console.warn('Error initializing custom audio playback:', e);
+    console.warn('[AUDIO ERROR] Error initializing custom audio playback:', e);
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     return {
       promise: Promise.resolve(),

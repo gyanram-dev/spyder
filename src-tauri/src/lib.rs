@@ -36,9 +36,13 @@ fn show_reminder(app: tauri::AppHandle, message: String, character: Option<Strin
         }
 
         let _ = window.set_always_on_top(true);
-        let _ = window.set_focusable(false);
         let _ = window.set_skip_taskbar(true);
         let _ = window.set_shadow(false);
+
+        // On Linux WebKitGTK, hidden windows suspend JS execution and IPC listeners.
+        // Revealing window directly in Rust wakes up WebKitGTK to process the trigger event.
+        let _ = window.show();
+        let _ = window.unminimize();
 
         let now_emit = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

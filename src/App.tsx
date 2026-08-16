@@ -1058,7 +1058,7 @@ export default function App() {
                         <select
                           value={repeat}
                           onChange={(e) => setRepeat(e.target.value as RepeatOption)}
-                          className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full"
+                          className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full appearance-none [color-scheme:dark]"
                         >
                           <option value="never" className="bg-[#0c061e] text-white">Never</option>
                           <option value="every_day" className="bg-[#0c061e] text-white">Every day</option>
@@ -1101,7 +1101,7 @@ export default function App() {
                       <select
                         value={character}
                         onChange={(e) => setCharacter(getValidCharacter(e.target.value))}
-                        className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full"
+                        className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full appearance-none [color-scheme:dark]"
                       >
                         <option value="spiderman" className="bg-[#0c061e] text-white">🕷 Spider-Man</option>
                         <option value="animeGirl" className="bg-[#0c061e] text-white">🌸 Anime Girl</option>
@@ -1126,7 +1126,7 @@ export default function App() {
                           setSoundType(val);
                           stopPreviewAudio();
                         }}
-                        className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full"
+                        className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full appearance-none [color-scheme:dark]"
                       >
                         <option value="none" className="bg-[#0c061e] text-white">No sound</option>
                         <option value="default" className="bg-[#0c061e] text-white">Default sound</option>
@@ -1340,7 +1340,9 @@ export default function App() {
                 <div className="space-y-4">
                   <label className="flex items-center justify-between cursor-pointer p-4 rounded-2xl bg-[#0b061a] border border-purple-500/20 hover:border-purple-500/40 transition-all select-none">
                     <span className="text-xs font-bold text-white tracking-wide">
-                      Launch at Windows startup
+                      {typeof navigator !== 'undefined' && /linux/i.test(navigator.userAgent || navigator.platform)
+                        ? 'Launch at system startup'
+                        : 'Launch at Windows startup'}
                     </span>
                     <input
                       type="checkbox"

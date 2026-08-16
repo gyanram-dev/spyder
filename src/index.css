@@ -13,4 +13,18 @@
     background-color: transparent !important;
     color: #ffffff;
   }
+
+  select {
+    color-scheme: dark;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #0b061a;
+    color: #ffffff;
+  }
+
+  select option {
+    background-color: #0c061e !important;
+    color: #ffffff !important;
+  }
 }
