@@ -13,49 +13,62 @@ fn show_reminder(app: tauri::AppHandle, message: String, character: Option<Strin
         .unwrap_or_default()
         .as_millis();
     println!(
-        "[show_reminder() called] time={}ms message='{}' character='{}'",
+        "[RUST DIAGNOSTIC] show_reminder() called | time={}ms | message='{}' | char='{}'",
         now, message, char_str
     );
     if let Some(window) = app.get_webview_window("reminder") {
-        // Position window at top-right corner of primary monitor
-        if let Ok(Some(monitor)) = window.current_monitor() {
-            let monitor_size = monitor.size();
-            let monitor_position = monitor.position();
-            let scale_factor = monitor.scale_factor();
+        println!("[RUST DIAGNOSTIC] Found 'reminder' webview window.");
+        
+        match window.current_monitor() {
+            Ok(Some(monitor)) => {
+                let monitor_size = monitor.size();
+                let monitor_position = monitor.position();
+                let scale_factor = monitor.scale_factor();
 
-            let window_width_phys = (580.0 * scale_factor) as i32;
-            let padding_phys = (20.0 * scale_factor) as i32;
+                let window_width_phys = (580.0 * scale_factor) as i32;
+                let padding_phys = (20.0 * scale_factor) as i32;
 
-            let x =
-                monitor_position.x + monitor_size.width as i32 - window_width_phys - padding_phys;
-            let y = monitor_position.y + padding_phys;
+                let x = monitor_position.x + monitor_size.width as i32 - window_width_phys - padding_phys;
+                let y = monitor_position.y + padding_phys;
 
-            let _ = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(
-                x, y,
-            )));
+                println!(
+                    "[RUST DIAGNOSTIC] Monitor found | size={}x{} | pos=({},{}) | scale={} | calc_x={} calc_y={}",
+                    monitor_size.width, monitor_size.height, monitor_position.x, monitor_position.y, scale_factor, x, y
+                );
+
+                let pos_res = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(x, y)));
+                println!("[RUST DIAGNOSTIC] set_position result: {:?}", pos_res);
+            }
+            Ok(None) => {
+                println!("[RUST DIAGNOSTIC WARNING] current_monitor returned None!");
+            }
+            Err(e) => {
+                println!("[RUST DIAGNOSTIC ERROR] Failed to query current_monitor: {:?}", e);
+            }
         }
 
-        let _ = window.set_always_on_top(true);
-        let _ = window.set_skip_taskbar(true);
-        let _ = window.set_shadow(false);
+        let aot_res = window.set_always_on_top(true);
+        println!("[RUST DIAGNOSTIC] set_always_on_top(true) result: {:?}", aot_res);
 
-        // On Linux WebKitGTK, hidden windows suspend JS execution and IPC listeners.
-        // Revealing window directly in Rust wakes up WebKitGTK to process the trigger event.
-        let _ = window.show();
-        let _ = window.unminimize();
+        let skip_res = window.set_skip_taskbar(true);
+        println!("[RUST DIAGNOSTIC] set_skip_taskbar(true) result: {:?}", skip_res);
 
-        let now_emit = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis();
-        println!(
-            "[trigger-reminder emitted] time={}ms message='{}' character='{}'",
-            now_emit, message, char_str
-        );
-        let _ = window.emit(
+        let show_res = window.show();
+        println!("[RUST DIAGNOSTIC] window.show() result: {:?}", show_res);
+
+        let unm_res = window.unminimize();
+        println!("[RUST DIAGNOSTIC] window.unminimize() result: {:?}", unm_res);
+
+        let focus_res = window.set_focus();
+        println!("[RUST DIAGNOSTIC] window.set_focus() result: {:?}", focus_res);
+
+        let emit_res = window.emit(
             "trigger-reminder",
             serde_json::json!({ "message": message, "character": char_str }),
         );
+        println!("[RUST DIAGNOSTIC] window.emit('trigger-reminder') result: {:?}", emit_res);
+    } else {
+        println!("[RUST DIAGNOSTIC ERROR] 'reminder' webview window NOT FOUND!");
     }
 }
 

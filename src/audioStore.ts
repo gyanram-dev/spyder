@@ -154,15 +154,77 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * Play Timebound default sound (fahh.mp3)
+ * Pure Web Audio API Synthesizer Chime Fallback
+ * Generates a clean digital chime sound (E5 -> G#5 -> B5 melody)
+ * Works 100% in software without external MP3 files, GStreamer decoders, or network requests.
+ */
+export const playSynthesizedChime = (): { stop: () => void } => {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) {
+      console.warn('[AUDIO FALLBACK ERROR] AudioContext not supported in this browser engine.');
+      return { stop: () => {} };
+    }
+
+    const ctx = new AudioCtx();
+    console.log('[AUDIO FALLBACK] Playing Web Audio API synthesized chime melody.');
+
+    const notes = [659.25, 830.61, 987.77]; // E5, G#5, B5 frequencies
+    const startTime = ctx.currentTime;
+    const oscs: OscillatorNode[] = [];
+
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime + idx * 0.15);
+
+      gain.gain.setValueAtTime(0.001, startTime + idx * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.3, startTime + idx * 0.15 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + idx * 0.15 + 0.4);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime + idx * 0.15);
+      osc.stop(startTime + idx * 0.15 + 0.45);
+
+      oscs.push(osc);
+    });
+
+    return {
+      stop: () => {
+        try {
+          oscs.forEach((osc) => osc.stop());
+          ctx.close();
+        } catch {
+          // ignore
+        }
+      },
+    };
+  } catch (e) {
+    console.warn('[AUDIO FALLBACK ERROR] Synthesizer chime failed:', e);
+    return { stop: () => {} };
+  }
+};
+
+/**
+ * Play Timebound default sound (fahh.mp3) with Web Audio fallback
  */
 export const playDefaultChimeSound = (): { stop: () => void } => {
   let audio: HTMLAudioElement | null = null;
+  let synthStop: (() => void) | null = null;
+
   try {
     console.log('[AUDIO] Playing default chime sound asset:', fahhAudioUrl);
     audio = new Audio(fahhAudioUrl);
+
     audio.play().catch((err) => {
-      console.warn('[AUDIO ERROR] Default audio playback rejected:', err);
+      console.warn('[AUDIO ERROR] Default audio element playback rejected/failed:', err);
+      console.log('[AUDIO FALLBACK] Triggering Web Audio API synthesizer chime fallback.');
+      const synth = playSynthesizedChime();
+      synthStop = synth.stop;
     });
 
     return {
@@ -172,6 +234,9 @@ export const playDefaultChimeSound = (): { stop: () => void } => {
             audio.pause();
             audio.currentTime = 0;
           }
+          if (synthStop) {
+            synthStop();
+          }
         } catch (e) {
           console.warn('[AUDIO ERROR] Error stopping default audio:', e);
         }
@@ -179,7 +244,8 @@ export const playDefaultChimeSound = (): { stop: () => void } => {
     };
   } catch (e) {
     console.warn('[AUDIO ERROR] Default audio initialization error:', e);
-    return { stop: () => {} };
+    console.log('[AUDIO FALLBACK] Triggering Web Audio API synthesizer chime fallback.');
+    return playSynthesizedChime();
   }
 };
 

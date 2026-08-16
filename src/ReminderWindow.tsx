@@ -78,22 +78,25 @@ export default function ReminderWindow() {
     let active = true;
     let unlistenFn: (() => void) | null = null;
 
+    console.log(`[FRONTEND DIAGNOSTIC] ReminderWindow mounted | href=${typeof window !== 'undefined' ? window.location.href : 'unknown'}`);
+
     getCurrentWindow()
       .listen<{ message: string; character?: ReminderCharacter }>('trigger-reminder', (event) => {
-        console.log(`[ReminderWindow received trigger-reminder] time=${Date.now()}ms payload=`, event.payload);
+        console.log(`[FRONTEND DIAGNOSTIC] ReminderWindow RECEIVED 'trigger-reminder' event! time=${Date.now()}ms payload=`, event.payload);
         const msg = event.payload?.message || 'Time to drink water! 💧';
         const char = getValidCharacter(event.payload?.character);
         setQueue((prev) => [...prev, { message: msg, character: char }]);
       })
       .then((fn) => {
         if (active) {
+          console.log('[FRONTEND DIAGNOSTIC] trigger-reminder listener attached successfully.');
           unlistenFn = fn;
         } else {
           fn();
         }
       })
       .catch((err) => {
-        console.warn('Failed to listen for trigger-reminder event:', err);
+        console.warn('[FRONTEND DIAGNOSTIC ERROR] Failed to listen for trigger-reminder event:', err);
       });
 
     return () => {
@@ -103,6 +106,21 @@ export default function ReminderWindow() {
       }
       if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
     };
+  }, []);
+
+  // Ensure window is hidden on initial application mount while event listener remains active
+  useEffect(() => {
+    if (currentState === 'Hidden' && queue.length === 0) {
+      import('@tauri-apps/api/core')
+        .then(({ invoke }) => {
+          invoke('hide_reminder').catch(() => {
+            getCurrentWindow().hide();
+          });
+        })
+        .catch(() => {
+          getCurrentWindow().hide();
+        });
+    }
   }, []);
 
   // Process queue when state is Hidden

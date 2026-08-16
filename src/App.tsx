@@ -37,6 +37,7 @@ import {
   characterNames,
   getValidCharacter,
 } from './ReminderWindow';
+import { CustomDropdown, DropdownOption } from './CustomDropdown';
 
 export type RepeatOption = 'never' | 'every_day' | 'custom_date';
 export type UpdateStatus =
@@ -1055,15 +1056,15 @@ export default function App() {
                       </label>
                       <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-2.5 flex items-center gap-2 transition-all shadow-inner">
                         <Repeat size={16} className="text-pink-400 shrink-0 ml-1" />
-                        <select
+                        <CustomDropdown
+                          options={[
+                            { value: 'never', label: 'Never' },
+                            { value: 'every_day', label: 'Every day' },
+                            { value: 'custom_date', label: 'Custom date' },
+                          ]}
                           value={repeat}
-                          onChange={(e) => setRepeat(e.target.value as RepeatOption)}
-                          className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full appearance-none [color-scheme:dark]"
-                        >
-                          <option value="never" className="bg-[#0c061e] text-white">Never</option>
-                          <option value="every_day" className="bg-[#0c061e] text-white">Every day</option>
-                          <option value="custom_date" className="bg-[#0c061e] text-white">Custom date</option>
-                        </select>
+                          onChange={(val) => setRepeat(val as RepeatOption)}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1093,22 +1094,17 @@ export default function App() {
                       Reminder Character
                     </label>
                     <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-2.5 flex items-center gap-2.5 transition-all shadow-inner">
-                      <img
-                        src={characterAssets[character] || characterAssets.spiderman}
-                        alt={characterNames[character] || 'Spider-Man'}
-                        className="w-6 h-6 object-contain shrink-0 ml-0.5"
-                      />
-                      <select
+                      <CustomDropdown
+                        options={[
+                          { value: 'spiderman', label: '🕷 Spider-Man', image: characterAssets.spiderman },
+                          { value: 'animeGirl', label: '🌸 Anime Girl', image: characterAssets.animeGirl },
+                          { value: 'ninja', label: '🥷 Black Ninja', image: characterAssets.ninja },
+                          { value: 'foxSpirit', label: '🦊 Fox Spirit', image: characterAssets.foxSpirit },
+                          { value: 'littlePanda', label: '🐼 Little Panda', image: characterAssets.littlePanda },
+                        ]}
                         value={character}
-                        onChange={(e) => setCharacter(getValidCharacter(e.target.value))}
-                        className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full appearance-none [color-scheme:dark]"
-                      >
-                        <option value="spiderman" className="bg-[#0c061e] text-white">🕷 Spider-Man</option>
-                        <option value="animeGirl" className="bg-[#0c061e] text-white">🌸 Anime Girl</option>
-                        <option value="ninja" className="bg-[#0c061e] text-white">🥷 Black Ninja</option>
-                        <option value="foxSpirit" className="bg-[#0c061e] text-white">🦊 Fox Spirit</option>
-                        <option value="littlePanda" className="bg-[#0c061e] text-white">🐼 Little Panda</option>
-                      </select>
+                        onChange={(val) => setCharacter(getValidCharacter(val))}
+                      />
                     </div>
                   </div>
 
@@ -1119,19 +1115,19 @@ export default function App() {
                     </label>
                     <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-2.5 flex items-center gap-2 transition-all shadow-inner">
                       <Volume2 size={16} className="text-pink-400 shrink-0 ml-1" />
-                      <select
+                      <CustomDropdown
+                        options={[
+                          { value: 'none', label: 'No sound' },
+                          { value: 'default', label: 'Default sound' },
+                          { value: 'custom', label: 'Custom sound' },
+                        ]}
                         value={soundType}
-                        onChange={(e) => {
-                          const val = e.target.value as SoundType;
-                          setSoundType(val);
+                        onChange={(val) => {
+                          const s = val as SoundType;
+                          setSoundType(s);
                           stopPreviewAudio();
                         }}
-                        className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full appearance-none [color-scheme:dark]"
-                      >
-                        <option value="none" className="bg-[#0c061e] text-white">No sound</option>
-                        <option value="default" className="bg-[#0c061e] text-white">Default sound</option>
-                        <option value="custom" className="bg-[#0c061e] text-white">Custom sound</option>
-                      </select>
+                      />
 
                       {soundType !== 'none' && (
                         <button
