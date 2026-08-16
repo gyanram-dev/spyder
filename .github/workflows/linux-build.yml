@@ -57,28 +57,33 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build Linux AppImage and Debian package
+      - name: Import Signing Key File
         env:
-          APPIMAGE_EXTRACT_AND_RUN: 1
-          RAW_KEY_B64: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_B64 }}
-          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+          KEY_B64: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_B64 }}
+          KEY_RAW: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
-          SECRET_VAL="${RAW_KEY_B64:-$RAW_KEY}"
+          mkdir -p ~/.tauri
+          INPUT_VAL="${KEY_B64:-$KEY_RAW}"
 
-          if [ -z "$SECRET_VAL" ]; then
-            echo "ERROR: No signing key secret found in TAURI_SIGNING_PRIVATE_KEY_B64 or TAURI_SIGNING_PRIVATE_KEY"
+          if [ -z "$INPUT_VAL" ]; then
+            echo "ERROR: Neither TAURI_SIGNING_PRIVATE_KEY_B64 nor TAURI_SIGNING_PRIVATE_KEY secret is configured in GitHub repository settings!"
             exit 1
           fi
 
-          if echo "$SECRET_VAL" | grep -q "^untrusted comment:"; then
-            FINAL_KEY=$(echo "$SECRET_VAL" | base64 -w 0)
+          if echo "$INPUT_VAL" | grep -q "^untrusted comment:"; then
+            echo "$INPUT_VAL" > ~/.tauri/timebound-v2.key
           else
-            FINAL_KEY=$(echo "$SECRET_VAL" | tr -d '\r\n ')
+            echo "$INPUT_VAL" | base64 -d > ~/.tauri/timebound-v2.key 2>/dev/null || echo "$INPUT_VAL" > ~/.tauri/timebound-v2.key
           fi
 
-          export TAURI_SIGNING_PRIVATE_KEY="$FINAL_KEY"
-          npm run tauri build -- --bundles appimage,deb
+          echo "TAURI_SIGNING_PRIVATE_KEY=/home/runner/.tauri/timebound-v2.key" >> $GITHUB_ENV
+
+      - name: Build Linux AppImage and Debian package
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        run: npm run tauri build -- --bundles appimage,deb
+
 
 
 
