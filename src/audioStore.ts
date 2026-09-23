@@ -1,4 +1,3 @@
-import fahhWavUrl from './assets/sounds/fahh.wav';
 import fahhAudioUrl from './assets/sounds/fahh.mp3';
 
 const DB_NAME = 'TimeboundAudioDB';
@@ -133,110 +132,13 @@ export const deleteAudioFile = async (soundId: string): Promise<void> => {
 /**
  * Play Timebound default sound (fahh.mp3)
  */
-export type SoundType = 'none' | 'default' | 'custom';
-
-// Pre-unlock browser/WebKitGTK audio context on first user interaction
-if (typeof window !== 'undefined') {
-  const unlockAudioContext = () => {
-    try {
-      const a = new Audio(fahhAudioUrl);
-      a.volume = 0.001;
-      const p = a.play();
-      if (p) {
-        p.then(() => {
-          a.pause();
-          a.currentTime = 0;
-        }).catch(() => {});
-      }
-    } catch {
-      // ignore
-    }
-  };
-  window.addEventListener('click', unlockAudioContext, { once: true });
-  window.addEventListener('keydown', unlockAudioContext, { once: true });
-}
-
-/**
- * Pure Web Audio API Synthesizer Chime Fallback
- * Generates a clean digital chime sound (E5 -> G#5 -> B5 melody)
- * Works 100% in software without external MP3 files, GStreamer decoders, or network requests.
- */
-export const playSynthesizedChime = (): { stop: () => void } => {
-  try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioCtx) {
-      console.warn('[AUDIO FALLBACK ERROR] AudioContext not supported in this browser engine.');
-      return { stop: () => {} };
-    }
-
-    const ctx = new AudioCtx();
-    console.log('[AUDIO FALLBACK] Playing Web Audio API synthesized chime melody.');
-
-    const notes = [659.25, 830.61, 987.77]; // E5, G#5, B5 frequencies
-    const startTime = ctx.currentTime;
-    const oscs: OscillatorNode[] = [];
-
-    notes.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, startTime + idx * 0.15);
-
-      gain.gain.setValueAtTime(0.001, startTime + idx * 0.15);
-      gain.gain.exponentialRampToValueAtTime(0.3, startTime + idx * 0.15 + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + idx * 0.15 + 0.4);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(startTime + idx * 0.15);
-      osc.stop(startTime + idx * 0.15 + 0.45);
-
-      oscs.push(osc);
-    });
-
-    return {
-      stop: () => {
-        try {
-          oscs.forEach((osc) => osc.stop());
-          ctx.close();
-        } catch {
-          // ignore
-        }
-      },
-    };
-  } catch (e) {
-    console.warn('[AUDIO FALLBACK ERROR] Synthesizer chime failed:', e);
-    return { stop: () => {} };
-  }
-};
-
-/**
- * Play Timebound default WAV sound asset
- */
 export const playDefaultChimeSound = (): { stop: () => void } => {
   let audio: HTMLAudioElement | null = null;
-  let synthStop: (() => void) | null = null;
-
   try {
-    console.log('[AUDIO] attempting reminder sound');
-    console.log('[AUDIO] sound URL/path:', fahhWavUrl);
-    audio = new Audio(fahhWavUrl);
-
-    const playPromise = audio.play();
-    if (playPromise) {
-      playPromise
-        .then(() => {
-          console.log('[AUDIO] playback started');
-        })
-        .catch((err) => {
-          console.warn('[AUDIO ERROR] Default WAV audio playback rejected/failed:', err);
-          console.log('[AUDIO FALLBACK] Triggering Web Audio API synthesizer chime fallback.');
-          const synth = playSynthesizedChime();
-          synthStop = synth.stop;
-        });
-    }
+    audio = new Audio(fahhAudioUrl);
+    audio.play().catch((err) => {
+      console.warn('Default audio playback error:', err);
+    });
 
     return {
       stop: () => {
@@ -245,81 +147,15 @@ export const playDefaultChimeSound = (): { stop: () => void } => {
             audio.pause();
             audio.currentTime = 0;
           }
-          if (synthStop) {
-            synthStop();
-          }
         } catch (e) {
-          console.warn('[AUDIO ERROR] Error stopping default audio:', e);
+          console.warn('Error stopping default audio:', e);
         }
       },
     };
   } catch (e) {
-    console.warn('[AUDIO ERROR] Default WAV audio initialization error:', e);
-    console.log('[AUDIO FALLBACK] Triggering Web Audio API synthesizer chime fallback.');
-    return playSynthesizedChime();
-  }
-};
-
-/**
- * Canonical sound playback function for Preview, Test Reminder, and Scheduled Reminders
- */
-export const playReminderSound = (
-  soundType: SoundType = 'default',
-  customSoundId?: string
-): { stop: () => void } => {
-  console.log(`[REMINDER] trigger received | soundType=${soundType}`);
-
-  if (soundType === 'none') {
-    console.log('[AUDIO] Sound set to none. Skipping playback.');
+    console.warn('Default audio initialization error:', e);
     return { stop: () => {} };
   }
-
-  const isLinux =
-    typeof navigator !== 'undefined' &&
-    /linux/i.test(navigator.userAgent || navigator.platform);
-
-  if (isLinux && soundType === 'default') {
-    console.log('[AUDIO] Linux platform detected. Triggering Rust native audio command play_native_sound.');
-    import('@tauri-apps/api/core')
-      .then(({ invoke }) => {
-        invoke('play_native_sound').catch((err) => {
-          console.warn('[AUDIO ERROR] Tauri play_native_sound invoke failed:', err);
-          playDefaultChimeSound();
-        });
-      })
-      .catch(() => {
-        playDefaultChimeSound();
-      });
-
-    return { stop: () => {} };
-  }
-
-  if (soundType === 'custom' && customSoundId) {
-    console.log(`[AUDIO] Attempting custom sound playback | soundId=${customSoundId}`);
-    let customController: { stop: () => void } | null = null;
-    getAudioFile(customSoundId)
-      .then((blob) => {
-        if (blob) {
-          const res = playCustomAudioBlob(blob);
-          customController = { stop: res.stop };
-        } else {
-          console.warn('[AUDIO ERROR] Custom sound file not found. Falling back to default WAV sound.');
-          customController = playDefaultChimeSound();
-        }
-      })
-      .catch((err) => {
-        console.warn('[AUDIO ERROR] Failed to load custom sound:', err);
-        customController = playDefaultChimeSound();
-      });
-
-    return {
-      stop: () => {
-        if (customController) customController.stop();
-      },
-    };
-  }
-
-  return playDefaultChimeSound();
 };
 
 /**
@@ -333,11 +169,10 @@ export const playCustomAudioBlob = (
 
   try {
     objectUrl = URL.createObjectURL(blob);
-    console.log('[AUDIO] Playing custom audio blob URL:', objectUrl);
     audio = new Audio(objectUrl);
 
     const playPromise = audio.play().catch((err) => {
-      console.warn('[AUDIO ERROR] Custom audio playback failed:', err);
+      console.warn('Custom audio playback failed:', err);
     });
 
     return {
@@ -355,7 +190,7 @@ export const playCustomAudioBlob = (
       },
     };
   } catch (e) {
-    console.warn('[AUDIO ERROR] Error initializing custom audio playback:', e);
+    console.warn('Error initializing custom audio playback:', e);
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     return {
       promise: Promise.resolve(),

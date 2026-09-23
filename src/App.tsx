@@ -27,7 +27,6 @@ import timeboundLogo from './assets/logo.png';
 import {
   playDefaultChimeSound,
   playCustomAudioBlob,
-  playReminderSound,
   getAudioFile,
   saveAudioFile,
   validateAudioFile,
@@ -38,7 +37,6 @@ import {
   characterNames,
   getValidCharacter,
 } from './ReminderWindow';
-import { CustomDropdown, DropdownOption } from './CustomDropdown';
 
 export type RepeatOption = 'never' | 'every_day' | 'custom_date';
 export type UpdateStatus =
@@ -409,6 +407,30 @@ export default function App() {
     setIsPreviewing(false);
   };
 
+  const playReminderSound = async (type?: SoundType, id?: string) => {
+    stopActiveReminderAudio();
+
+    if (!type || type === 'none') {
+      return;
+    }
+
+    if (type === 'default') {
+      activeAudioControllerRef.current = playDefaultChimeSound();
+      return;
+    }
+
+    if (type === 'custom' && id) {
+      try {
+        const blob = await getAudioFile(id);
+        if (blob) {
+          activeAudioControllerRef.current = playCustomAudioBlob(blob);
+        }
+      } catch (e) {
+        console.warn('Failed to play custom audio for reminder:', e);
+      }
+    }
+  };
+
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     import('@tauri-apps/api/event')
@@ -436,13 +458,34 @@ export default function App() {
 
     if (soundType === 'none') return;
 
-    setIsPreviewing(true);
-    const controller = playReminderSound(soundType, soundId);
-    previewAudioControllerRef.current = controller;
-    setTimeout(() => {
-      setIsPreviewing(false);
-      previewAudioControllerRef.current = null;
-    }, 1500);
+    if (soundType === 'default') {
+      setIsPreviewing(true);
+      const controller = playDefaultChimeSound();
+      previewAudioControllerRef.current = controller;
+      setTimeout(() => {
+        setIsPreviewing(false);
+        previewAudioControllerRef.current = null;
+      }, 1500);
+      return;
+    }
+
+    if (soundType === 'custom' && soundId) {
+      try {
+        const blob = await getAudioFile(soundId);
+        if (!blob) {
+          setShowError(true);
+          setSuccessMessage('Could not load custom audio file');
+          setTimeout(() => setShowError(false), 3000);
+          return;
+        }
+        setIsPreviewing(true);
+        const controller = playCustomAudioBlob(blob);
+        previewAudioControllerRef.current = controller;
+      } catch (e) {
+        console.warn('Failed to preview custom audio:', e);
+        setIsPreviewing(false);
+      }
+    }
   };
 
   const handleChooseAudioFile = async (
@@ -660,7 +703,7 @@ export default function App() {
       `[show_reminder() called] time=${Date.now()}ms message="${formattedMsg}" sound=${sType} character=${selectedChar}`
     );
 
-    activeAudioControllerRef.current = playReminderSound(sType, sId);
+    playReminderSound(sType, sId);
 
     try {
       const { invoke } = await import('@tauri-apps/api/core');
@@ -1012,15 +1055,15 @@ export default function App() {
                       </label>
                       <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-2.5 flex items-center gap-2 transition-all shadow-inner">
                         <Repeat size={16} className="text-pink-400 shrink-0 ml-1" />
-                        <CustomDropdown
-                          options={[
-                            { value: 'never', label: 'Never' },
-                            { value: 'every_day', label: 'Every day' },
-                            { value: 'custom_date', label: 'Custom date' },
-                          ]}
+                        <select
                           value={repeat}
-                          onChange={(val) => setRepeat(val as RepeatOption)}
-                        />
+                          onChange={(e) => setRepeat(e.target.value as RepeatOption)}
+                          className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full"
+                        >
+                          <option value="never" className="bg-[#0c061e] text-white">Never</option>
+                          <option value="every_day" className="bg-[#0c061e] text-white">Every day</option>
+                          <option value="custom_date" className="bg-[#0c061e] text-white">Custom date</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -1050,17 +1093,22 @@ export default function App() {
                       Reminder Character
                     </label>
                     <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-2.5 flex items-center gap-2.5 transition-all shadow-inner">
-                      <CustomDropdown
-                        options={[
-                          { value: 'spiderman', label: '🕷 Spider-Man', image: characterAssets.spiderman },
-                          { value: 'animeGirl', label: '🌸 Anime Girl', image: characterAssets.animeGirl },
-                          { value: 'ninja', label: '🥷 Black Ninja', image: characterAssets.ninja },
-                          { value: 'foxSpirit', label: '🦊 Fox Spirit', image: characterAssets.foxSpirit },
-                          { value: 'littlePanda', label: '🐼 Little Panda', image: characterAssets.littlePanda },
-                        ]}
-                        value={character}
-                        onChange={(val) => setCharacter(getValidCharacter(val))}
+                      <img
+                        src={characterAssets[character] || characterAssets.spiderman}
+                        alt={characterNames[character] || 'Spider-Man'}
+                        className="w-6 h-6 object-contain shrink-0 ml-0.5"
                       />
+                      <select
+                        value={character}
+                        onChange={(e) => setCharacter(getValidCharacter(e.target.value))}
+                        className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full"
+                      >
+                        <option value="spiderman" className="bg-[#0c061e] text-white">🕷 Spider-Man</option>
+                        <option value="animeGirl" className="bg-[#0c061e] text-white">🌸 Anime Girl</option>
+                        <option value="ninja" className="bg-[#0c061e] text-white">🥷 Black Ninja</option>
+                        <option value="foxSpirit" className="bg-[#0c061e] text-white">🦊 Fox Spirit</option>
+                        <option value="littlePanda" className="bg-[#0c061e] text-white">🐼 Little Panda</option>
+                      </select>
                     </div>
                   </div>
 
@@ -1071,19 +1119,19 @@ export default function App() {
                     </label>
                     <div className="bg-[#0b061a] border border-purple-500/20 focus-within:border-pink-500/50 rounded-2xl p-2.5 flex items-center gap-2 transition-all shadow-inner">
                       <Volume2 size={16} className="text-pink-400 shrink-0 ml-1" />
-                      <CustomDropdown
-                        options={[
-                          { value: 'none', label: 'No sound' },
-                          { value: 'default', label: 'Default sound' },
-                          { value: 'custom', label: 'Custom sound' },
-                        ]}
+                      <select
                         value={soundType}
-                        onChange={(val) => {
-                          const s = val as SoundType;
-                          setSoundType(s);
+                        onChange={(e) => {
+                          const val = e.target.value as SoundType;
+                          setSoundType(val);
                           stopPreviewAudio();
                         }}
-                      />
+                        className="bg-transparent text-white font-bold text-xs border-none focus:outline-none cursor-pointer w-full"
+                      >
+                        <option value="none" className="bg-[#0c061e] text-white">No sound</option>
+                        <option value="default" className="bg-[#0c061e] text-white">Default sound</option>
+                        <option value="custom" className="bg-[#0c061e] text-white">Custom sound</option>
+                      </select>
 
                       {soundType !== 'none' && (
                         <button
@@ -1292,9 +1340,7 @@ export default function App() {
                 <div className="space-y-4">
                   <label className="flex items-center justify-between cursor-pointer p-4 rounded-2xl bg-[#0b061a] border border-purple-500/20 hover:border-purple-500/40 transition-all select-none">
                     <span className="text-xs font-bold text-white tracking-wide">
-                      {typeof navigator !== 'undefined' && /linux/i.test(navigator.userAgent || navigator.platform)
-                        ? 'Launch at system startup'
-                        : 'Launch at Windows startup'}
+                      Launch at Windows startup
                     </span>
                     <input
                       type="checkbox"

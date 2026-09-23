@@ -78,25 +78,22 @@ export default function ReminderWindow() {
     let active = true;
     let unlistenFn: (() => void) | null = null;
 
-    console.log(`[FRONTEND DIAGNOSTIC] ReminderWindow mounted | href=${typeof window !== 'undefined' ? window.location.href : 'unknown'}`);
-
     getCurrentWindow()
       .listen<{ message: string; character?: ReminderCharacter }>('trigger-reminder', (event) => {
-        console.log(`[FRONTEND DIAGNOSTIC] ReminderWindow RECEIVED 'trigger-reminder' event! time=${Date.now()}ms payload=`, event.payload);
+        console.log(`[ReminderWindow received trigger-reminder] time=${Date.now()}ms payload=`, event.payload);
         const msg = event.payload?.message || 'Time to drink water! 💧';
         const char = getValidCharacter(event.payload?.character);
         setQueue((prev) => [...prev, { message: msg, character: char }]);
       })
       .then((fn) => {
         if (active) {
-          console.log('[FRONTEND DIAGNOSTIC] trigger-reminder listener attached successfully.');
           unlistenFn = fn;
         } else {
           fn();
         }
       })
       .catch((err) => {
-        console.warn('[FRONTEND DIAGNOSTIC ERROR] Failed to listen for trigger-reminder event:', err);
+        console.warn('Failed to listen for trigger-reminder event:', err);
       });
 
     return () => {
@@ -106,21 +103,6 @@ export default function ReminderWindow() {
       }
       if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
     };
-  }, []);
-
-  // Ensure window is hidden on initial application mount while event listener remains active
-  useEffect(() => {
-    if (currentState === 'Hidden' && queue.length === 0) {
-      import('@tauri-apps/api/core')
-        .then(({ invoke }) => {
-          invoke('hide_reminder').catch(() => {
-            getCurrentWindow().hide();
-          });
-        })
-        .catch(() => {
-          getCurrentWindow().hide();
-        });
-    }
   }, []);
 
   // Process queue when state is Hidden
@@ -135,20 +117,19 @@ export default function ReminderWindow() {
         return remaining;
       });
 
-      // Wait for React to commit off-screen (y: -650) initial state, then reveal native window
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          import('@tauri-apps/api/core')
-            .then(({ invoke }) => {
-              invoke('reveal_reminder').catch(() => {
-                getCurrentWindow().show();
-              });
-            })
-            .catch(() => {
+      // Reveal the native window directly (a hidden webview does not
+      // reliably execute requestAnimationFrame, so it must not gate this).
+      setTimeout(() => {
+        import('@tauri-apps/api/core')
+          .then(({ invoke }) => {
+            invoke('reveal_reminder').catch(() => {
               getCurrentWindow().show();
             });
-        });
-      });
+          })
+          .catch(() => {
+            getCurrentWindow().show();
+          });
+      }, 0);
     }
   }, [currentState, queue]);
 
@@ -218,41 +199,61 @@ export default function ReminderWindow() {
   const activeCharacterAsset = characterAssets[validCharacterKey] || characterAssets.spiderman;
 
   return (
-    <div className="w-full h-screen bg-[#0b071e] text-white border-2 border-purple-500/40 rounded-2xl p-4 flex items-center justify-between select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif] shadow-[0_20px_50px_rgba(0,0,0,0.9)]">
-      {/* Left Side: Reminder Message & Action */}
-      <div className="flex-1 pr-4 min-w-0 flex flex-col justify-between h-full py-1">
-        <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-widest text-pink-400 mb-1.5">
-            REMINDER
-          </div>
-          <p className="text-white font-bold text-sm leading-snug break-words">
-            {currentMessage || 'Time to drink water! 💧'}
-          </p>
-        </div>
+    <div className="w-full h-screen bg-transparent flex items-start justify-end pr-4 pt-0 select-none overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+      {/* Notification Container */}
+      {showSpider && (
+        <div className="relative inline-block">
+          {/* Character PNG (Primary Animation: straight vertical translateY only, 700ms easeOut) */}
+          <motion.img
+            key={currentMessage + validCharacterKey}
+            src={activeCharacterAsset}
+            alt={validCharacterKey}
+            initial={{ y: -650 }}
+            animate={{ y: isLeaving ? -650 : 0 }}
+            transition={{
+              duration: isLeaving ? 0.6 : 0.7,
+              ease: isLeaving ? 'easeIn' : 'easeOut',
+            }}
+            onAnimationComplete={() => {
+              if (currentState === 'SpiderLeaving') {
+                handleExitComplete();
+              } else if (currentState === 'SpiderEntering') {
+                handleSpiderArrived();
+              }
+            }}
+            className="w-[280px] max-h-[420px] object-contain drop-shadow-[0_25px_40px_rgba(0,0,0,0.8)] pointer-events-none block"
+          />
 
-        <div className="flex justify-start pt-2">
-          <button
-            type="button"
-            onClick={handleDismiss}
-            className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
-          >
-            Dismiss
-          </button>
+          {/* Reminder Card (Positioned absolutely to the LEFT of character anchor) */}
+          <AnimatePresence>
+            {showCard && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="absolute right-full mr-3 top-[155px] w-[250px] bg-white text-slate-900 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-slate-100 z-30"
+              >
+                <div className="text-[10px] font-extrabold uppercase tracking-widest text-red-500 mb-1.5">
+                  REMINDER
+                </div>
+                <p className="text-slate-900 font-bold text-sm leading-snug break-words mb-3">
+                  {currentMessage}
+                </p>
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={handleDismiss}
+                    className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-sm transition-colors cursor-pointer"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </div>
-
-      {/* Right Side: Character Asset */}
-      <div className="shrink-0 w-[140px] h-[200px] flex items-center justify-center relative">
-        <motion.img
-          key={currentMessage + validCharacterKey}
-          src={activeCharacterAsset}
-          alt={validCharacterKey}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-          className="max-w-full max-h-full object-contain drop-shadow-[0_10px_25px_rgba(0,0,0,0.8)] pointer-events-none"
-        />
-      </div>
+      )}
     </div>
   );
 }
