@@ -58,7 +58,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI1QUQ0QkRCRDVDOTBCNEYKUldSUEM4blYyMHV0SlpQTU83SkpwdFcyMEpKV0wxYjJ0dXA1MFRiY1NCS3NFN3AzdnhzU2x6NzIK",
       "endpoints": [
-        "https://raw.githubusercontent.com/gyanram-dev/spyder/main/latest.json"
+        "https://github.com/gyanram-dev/spyder/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"
