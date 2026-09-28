@@ -1,0 +1,14 @@
+# CODEOWNERS for TimeBound
+# Maintains explicit ownership for critical application areas
+
+* @gyanram-dev
+
+# CI/CD and security workflows
+.github/workflows/ @gyanram-dev
+
+# Core Tauri Rust backend and security configuration
+src-tauri/ @gyanram-dev
+src-tauri/tauri.conf.json @gyanram-dev
+
+# Node package definition
+package.json @gyanram-dev
